@@ -429,9 +429,8 @@ export default function FichaAlumno({ alumno, alumnos, docentes, pros, escuelas,
     { id: "info",        l: "📋 Info"      },
     { id: "docentes",    l: "👥 Docentes"  },
     { id: "historial",   l: "📝 Historial" },
-    { id: "actividades", l: "✨ Actividades"},
-    { id: "docs",        l: "📄 Documentos"},
     { id: "horarios",    l: "🗓 Horarios"  },
+    { id: "actividades", l: "✨ Actividades"},
   ];
 
   return (
@@ -597,9 +596,6 @@ export default function FichaAlumno({ alumno, alumnos, docentes, pros, escuelas,
 
       {/* ── TAB ACTIVIDADES IA ── */}
       {tab === "actividades" && <TabActividades alumno={alumno} registros={registros} docentes={docentes} ec={ec} />}
-
-      {/* ── TAB DOCUMENTOS ── */}
-      {tab === "docs" && <TabDocumentos alumno={alumno} docentes={docentes} escuelas={escuelas} registros={registros} ec={ec} />}
 
       {/* ── TAB HORARIOS ── */}
       {tab === "horarios" && <div>

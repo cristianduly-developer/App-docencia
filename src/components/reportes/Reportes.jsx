@@ -359,13 +359,15 @@ function VistaAlumno({ alumno, escuelas, docentes, alumnos, onVerAlumno }) {
 
       {/* Tab historial */}
       {tab === "historial" && <div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
-          <select value={filMateria} onChange={e => { setFilMateria(e.target.value); setPag(0); }} style={{ border: `1.5px solid ${BD}`, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontFamily: "inherit", background: "#fff" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8, marginBottom: 10 }}>
+          <select value={filMateria} onChange={e => { setFilMateria(e.target.value); setPag(0); }} style={{ border: `1.5px solid ${BD}`, borderRadius: 10, padding: "8px 10px", fontSize: 13, fontFamily: "inherit", background: "#fff", width: "100%", boxSizing: "border-box" }}>
             <option value="">Todas las materias</option>
             {materias.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
-          <input type="date" value={filDesde} onChange={e => { setFilDesde(e.target.value); setPag(0); }} style={{ border: `1.5px solid ${BD}`, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontFamily: "inherit" }} />
-          <input type="date" value={filHasta} onChange={e => { setFilHasta(e.target.value); setPag(0); }} style={{ border: `1.5px solid ${BD}`, borderRadius: 10, padding: "8px 10px", fontSize: 12, fontFamily: "inherit" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <input type="date" value={filDesde} onChange={e => { setFilDesde(e.target.value); setPag(0); }} style={{ border: `1.5px solid ${BD}`, borderRadius: 10, padding: "8px 10px", fontSize: 13, fontFamily: "inherit", width: "100%", boxSizing: "border-box", minWidth: 0 }} />
+            <input type="date" value={filHasta} onChange={e => { setFilHasta(e.target.value); setPag(0); }} style={{ border: `1.5px solid ${BD}`, borderRadius: 10, padding: "8px 10px", fontSize: 13, fontFamily: "inherit", width: "100%", boxSizing: "border-box", minWidth: 0 }} />
+          </div>
         </div>
         <button onClick={exportarHistorial} style={{ width: "100%", padding: "10px", borderRadius: 12, border: `1.5px solid ${ec}`, background: "#fff", color: ec, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 12 }}>
           📄 Exportar historial PDF ({regsFil.length} registros)
@@ -484,7 +486,7 @@ export default function Reportes({ alumnos, docentes, pros, escuelas, registros,
   const alumno = aluId ? alumnos.find(a => String(a.id) === String(aluId) && !a.eliminado) : null;
 
   return (
-    <div style={{ paddingBottom: 80 }}>
+    <div style={{ paddingBottom: 80, overflowX: "hidden" }}>
       <div style={{ background: "linear-gradient(135deg,#1a202c,#2d3748)", padding: "16px 20px", color: "#fff" }}>
         <div style={{ fontWeight: 800, fontSize: 18 }}>📊 Reportes</div>
       </div>
