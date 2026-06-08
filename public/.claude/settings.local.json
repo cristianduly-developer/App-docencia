@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l \"/mnt/c/Users/payef/OneDrive/Desktop/App aye/aye-app/public/index.html\")",
+      "WebFetch(domain:aye-app-one.vercel.app)",
+      "Bash(vercel --prod)",
+      "PowerShell(New-Item -ItemType File -Path \"C:\\\\Users\\\\payef\\\\OneDrive\\\\Desktop\\\\saas-admin-panel\\\\src\\\\index.css\" -Force)",
+      "Bash(dir \"C:\\\\Users\\\\payef\\\\OneDrive\\\\Desktop\\\\saas-admin-panel\\\\src\\\\components\")"
+    ]
+  }
+}

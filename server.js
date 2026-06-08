@@ -1,0 +1,629 @@
+// v2
+const express  = require('express');
+const cors     = require('cors');
+const fetch    = require('node-fetch');
+const path     = require('path');
+const crypto   = require('crypto');
+const { createClient }  = require('@supabase/supabase-js');
+const { OAuth2Client }  = require('google-auth-library');
+
+const app    = express();
+const PORT   = process.env.PORT || 3000;
+const GOOGLE_CLIENT_ID = "117583093488-94tk32l3502mj4c3vff7fci9oclcvvhn.apps.googleusercontent.com";
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+// ── Cliente Supabase central (SaaS) — service role ────────────
+const stripBOM = s => (s || '').replace(/^﻿/, '').trim();
+const CENTRAL_URL = 'https://ngymvfvlknaltsvsrvjm.supabase.co';
+const CENTRAL_KEY = 'sb_publishable_XhsLlwmbDz5ne7JoeEoVHw_Qo56KJmd';
+
+async function verificarAccesoCentral(email, appId) {
+  const res = await fetch(`${CENTRAL_URL}/rest/v1/rpc/verificar_acceso_email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': CENTRAL_KEY,
+      'Authorization': `Bearer ${CENTRAL_KEY}`,
+    },
+    body: JSON.stringify({ email_param: email, app_id_param: appId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || data.error || JSON.stringify(data));
+  return data;
+}
+
+// ── CORS: solo dominios permitidos ───────────────────────────
+const ORIGINS_PERMITIDOS = [
+  'https://aye-app-one.vercel.app',
+  'http://localhost:3000',
+];
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || ORIGINS_PERMITIDOS.includes(origin)) cb(null, true);
+    else cb(new Error('CORS: origen no permitido'));
+  }
+}));
+
+app.use(express.json({ limit: '1mb' })); // suficiente para todos los casos reales
+app.use(express.static(path.join(__dirname, 'public')));
+
+const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_KEY || ''
+);
+
+// ── Admins globales del sistema ───────────────────────────────
+const ADMINS = ['cristianduly@gmail.com'];
+
+// ── Token HMAC firmado — sin estado en servidor (funciona en serverless) ──
+const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 horas
+const SESSION_SECRET = process.env.SESSION_SECRET || 'aye-secret-key-2025';
+
+function crearToken(email, nombre, foto, orgId, plan) {
+  const payload = JSON.stringify({ email, nombre, foto, orgId: orgId || null, plan: plan || 'basico', exp: Date.now() + SESSION_TTL_MS });
+  const b64 = Buffer.from(payload).toString('base64url');
+  const sig  = crypto.createHmac('sha256', SESSION_SECRET).update(b64).digest('hex');
+  return `${b64}.${sig}`;
+}
+
+function validarToken(token) {
+  if (!token) return null;
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const [b64, sig] = parts;
+  const expectedSig = crypto.createHmac('sha256', SESSION_SECRET).update(b64).digest('hex');
+  // Comparación en tiempo constante para evitar timing attacks
+  if (!crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expectedSig, 'hex'))) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(b64, 'base64url').toString());
+    if (Date.now() > payload.exp) return null; // expirado
+    return payload;
+  } catch { return null; }
+}
+
+// ── Middleware de autenticación ───────────────────────────────
+function requireAuth(req, res, next) {
+  const token = req.headers['x-session-token'];
+  const session = validarToken(token);
+  if (!session) return res.status(401).json({ error: 'Sesión inválida o expirada. Volvé a iniciar sesión.' });
+  req.session = session;
+  req.orgId   = session.orgId || null; // disponible en los handlers
+  next();
+}
+
+// ══════════════════════════════════════════════════════════════
+// MAPEO camelCase (app) <-> snake_case (Supabase)
+// La app siempre trabaja en camelCase.
+// El servidor hace la conversión en ambas direcciones.
+// ══════════════════════════════════════════════════════════════
+
+// ── ESCUELAS ─────────────────────────────────────────────────
+function escParaDB(e) {
+  return {
+    id:        e.id,
+    nombre:    e.nombre    || '',
+    nivel:     e.nivel     || '',
+    color:     e.color     || '#2D6A4F',
+    direccion: e.direccion || '',
+    eoe:       e.eoe       || [],
+    activo:    e.activo    !== false,
+    eliminado: e.eliminado || false,
+    ciclo_archivado: e.cicloArchivado || null,
+  };
+}
+function escDesdeDB(r) {
+  return {
+    id:             r.id,
+    nombre:         r.nombre,
+    nivel:          r.nivel,
+    color:          r.color || '#2D6A4F',
+    direccion:      r.direccion,
+    eoe:            r.eoe || [],
+    activo:         r.activo !== false,
+    eliminado:      r.eliminado || false,
+    cicloArchivado: r.ciclo_archivado,
+  };
+}
+
+// ── DOCENTES ─────────────────────────────────────────────────
+function docParaDB(d) {
+  return {
+    id:         d.id,
+    nombre:     d.nombre    || '',
+    materia:    d.materia   || '',
+    escuela_id: d.escuelaId || null,
+    telefono:   d.telefono  || '',
+    mail:       d.mail      || '',
+    activo:     d.activo    !== false,
+    eliminado:  d.eliminado || false,
+  };
+}
+function docDesdeDB(r) {
+  return {
+    id:        r.id,
+    nombre:    r.nombre,
+    materia:   r.materia,
+    escuelaId: r.escuela_id,
+    telefono:  r.telefono,
+    mail:      r.mail,
+    activo:    r.activo !== false,
+    eliminado: r.eliminado || false,
+  };
+}
+
+// ── PROFESIONALES ────────────────────────────────────────────
+function proParaDB(p) {
+  return {
+    id:        p.id,
+    nombre:    p.nombre   || '',
+    rol:       p.rol      || '',
+    telefono:  p.telefono || '',
+    mail:      p.mail     || '',
+    eliminado: p.eliminado || false,
+  };
+}
+function proDesdeDB(r) {
+  return {
+    id:        r.id,
+    nombre:    r.nombre,
+    rol:       r.rol,
+    telefono:  r.telefono,
+    mail:      r.mail,
+    eliminado: r.eliminado || false,
+  };
+}
+
+// ── ALUMNOS ──────────────────────────────────────────────────
+// Columnas reales verificadas en Supabase:
+// id, nombre, escuela_id, curso, dni, cuil, fecha_nacimiento,
+// diagnostico, horarios, tutores, terapias, profesional_ids,
+// cud, cud_vencimiento, salud (JSONB), activo, eliminado,
+// ciclo_archivado, created_at
+// Campos extra van en salud (JSONB): direccion, telefonoCasa,
+// obraSocial, nroAfiliado, medicacion, cudNumero, trayectoria, obs
+function aluParaDB(a) {
+  return {
+    id:               a.id,
+    nombre:           a.nombre         || '',
+    escuela_id:       a.escuelaId      || null,
+    curso:            a.curso          || '',
+    dni:              a.dni            || '',
+    cuil:             a.cuil           || '',
+    fecha_nacimiento: a.fechaNacimiento|| null,
+    diagnostico:      a.diagnostico    || '',
+    horarios:         a.horarios       || [],
+    tutores:          a.tutores        || [],
+    terapias:         a.terapias       || [],
+    profesional_ids:  a.profesionalIds || [],
+    cud:              a.cud            || false,
+    cud_vencimiento:  a.cudVencimiento || null,
+    activo:           a.activo         !== false,
+    eliminado:        a.eliminado      || false,
+    ciclo_archivado:  a.cicloArchivado || null,
+    // Campos sin columna propia → JSONB salud
+    salud: {
+      direccion:    a.direccion    || '',
+      telefonoCasa: a.telefonoCasa || '',
+      obraSocial:   a.obraSocial   || '',
+      nroAfiliado:  a.nroAfiliado  || '',
+      medicacion:   a.medicacion   || '',
+      cudNumero:    a.cudNumero    || '',
+      trayectoria:  a.trayectoria  || [],
+      obs:          a.obs          || '',
+    }
+  };
+}
+function aluDesdeDB(r) {
+  const s = r.salud || {};
+  return {
+    id:              r.id,
+    nombre:          r.nombre,
+    escuelaId:       r.escuela_id,
+    curso:           r.curso,
+    dni:             r.dni,
+    cuil:            r.cuil,
+    fechaNacimiento: r.fecha_nacimiento,
+    diagnostico:     r.diagnostico,
+    horarios:        r.horarios        || [],
+    tutores:         r.tutores         || [],
+    terapias:        r.terapias        || [],
+    profesionalIds:  r.profesional_ids || [],
+    cud:             r.cud             || false,
+    cudVencimiento:  r.cud_vencimiento,
+    activo:          r.activo          !== false,
+    eliminado:       r.eliminado       || false,
+    cicloArchivado:  r.ciclo_archivado,
+    // Desde salud JSONB
+    direccion:       s.direccion    || '',
+    telefonoCasa:    s.telefonoCasa || '',
+    obraSocial:      s.obraSocial   || '',
+    nroAfiliado:     s.nroAfiliado  || '',
+    medicacion:      s.medicacion   || '',
+    cudNumero:       s.cudNumero    || '',
+    trayectoria:     s.trayectoria  || [],
+    obs:             s.obs          || '',
+  };
+}
+
+// ── REGISTROS ────────────────────────────────────────────────
+// En la app: { alumnoId: [regs] } — diccionario por alumno
+// En Supabase: tabla plana con alumno_id en cada fila
+// Para save: el cliente manda { ...reg, alumnoId } como un objeto plano
+function regParaDB(obj) {
+  return {
+    id:         obj.id,
+    alumno_id:  obj.alumnoId || obj.aluId || null,
+    fecha:      obj.fecha,
+    materia:    obj.materia    || '',
+    asistencia: obj.asistencia || 'presente',
+    avance:     obj.avance     || '',
+    acuerdo:    obj.acuerdo    || '',
+    docente:    obj.docente    || '',
+    tipo:       obj.tipo       || 'clase',
+    eliminado:  obj.eliminado  || false,
+  };
+}
+function regDesdeDB(r) {
+  return {
+    id:        r.id,
+    aluId:     r.alumno_id,
+    fecha:     r.fecha,
+    materia:   r.materia,
+    asistencia:r.asistencia,
+    avance:    r.avance,
+    acuerdo:   r.acuerdo,
+    docente:   r.docente,
+    tipo:      r.tipo || 'clase',
+    eliminado: r.eliminado || false,
+  };
+}
+
+// ── AVISOS ───────────────────────────────────────────────────
+function avisoParaDB(a) {
+  return {
+    id:        a.id,
+    alumno_id: a.alumnoId || null,
+    texto:     a.texto    || '',
+    fecha:     a.fecha    || null,
+    prioridad: a.prioridad|| 'media',
+    eliminado: a.eliminado|| false,
+  };
+}
+function avisoDesdeDB(r) {
+  return {
+    id:        r.id,
+    alumnoId:  r.alumno_id,
+    texto:     r.texto,
+    fecha:     r.fecha,
+    prioridad: r.prioridad || 'media',
+    eliminado: r.eliminado || false,
+  };
+}
+
+// ── DOCUMENTOS (PPI / Informes) ──────────────────────────────
+function docuParaDB(obj) {
+  return {
+    id:        obj.id,
+    alumno_id: obj.alumnoId,
+    ciclo:     obj.ciclo,
+    tipo:      obj.tipo,      // 'ppi' | 'medio' | 'final'
+    contenido: obj.contenido || {},
+    eliminado: obj.eliminado || false,
+  };
+}
+function docuDesdeDB(r) {
+  return {
+    id:       r.id,
+    alumnoId: r.alumno_id,
+    ciclo:    r.ciclo,
+    tipo:     r.tipo,
+    contenido:r.contenido || {},
+    eliminado:r.eliminado || false,
+  };
+}
+
+// ── Mapeo por tabla ───────────────────────────────────────────
+const MAPEO = {
+  escuelas:      { paraDB: escParaDB,   desdeDB: escDesdeDB   },
+  docentes:      { paraDB: docParaDB,   desdeDB: docDesdeDB   },
+  profesionales: { paraDB: proParaDB,   desdeDB: proDesdeDB   },
+  alumnos:       { paraDB: aluParaDB,   desdeDB: aluDesdeDB   },
+  registros:     { paraDB: regParaDB,   desdeDB: regDesdeDB   },
+  avisos:        { paraDB: avisoParaDB, desdeDB: avisoDesdeDB },
+  documentos:    { paraDB: docuParaDB,  desdeDB: docuDesdeDB  },
+};
+
+// ══════════════════════════════════════════════════════════════
+// Auth: verificación server-side del JWT de Google
+// ══════════════════════════════════════════════════════════════
+app.post('/api/verify-token', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ error: 'credential requerido' });
+    console.log('[verify-token] credential recibido, longitud:', credential?.length);
+
+    let ticket;
+    try {
+      ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: GOOGLE_CLIENT_ID,
+      });
+    } catch (googleErr) {
+      console.error('[verify-token] Google verifyIdToken error:', googleErr.message);
+      return res.status(401).json({ error: 'Token de Google inválido o expirado.' });
+    }
+    const payload = ticket.getPayload();
+    const email = (payload.email || '').toLowerCase().trim();
+    console.log('[verify-token] email verificado:', email);
+
+    // Admins globales: acceso sin restricciones a todos los datos
+    const esAdmin = ADMINS.includes(email);
+
+    let orgId = null;
+    let nombreDocente = payload.name;
+    let acceso = null;
+
+    if (esAdmin) {
+      // Admin entra sin verificación de suscripción
+      orgId = null; // ve todos los datos (sin filtro por org)
+    } else {
+      // Verificar acceso en el SaaS central
+      try {
+        const resultado = await verificarAccesoCentral(email, 'docentes');
+        console.log('[verify-token] RPC resultado raw:', JSON.stringify(resultado));
+        // La RPC devuelve array — tomamos el primer elemento
+        acceso = Array.isArray(resultado) ? (resultado[0] || null) : resultado;
+        console.log('[verify-token] acceso procesado:', JSON.stringify(acceso));
+      } catch (e) {
+        console.error('[verify-token] SaaS central error:', e.message);
+        return res.status(503).json({ error: 'No se pudo verificar el acceso. Intentá de nuevo.' });
+      }
+
+      if (!acceso || !acceso.tiene_acceso) {
+        const motivos = {
+          sin_cuenta:       'Tu cuenta no está registrada en el sistema.',
+          sin_organizacion: 'No tenés una organización asignada. Contactá al administrador.',
+          sin_suscripcion:  'No tenés una suscripción activa para esta app.',
+          impago:           'Tu suscripción está vencida. Contactá al administrador.',
+          suspendido:       'Tu acceso está suspendido. Contactá al administrador.',
+          desconocido:      'Tu cuenta no tiene acceso a esta app. Contactá al administrador.',
+        };
+        const motivo = acceso?.motivo || 'desconocido';
+        return res.status(403).json({ error: motivos[motivo] || `Acceso denegado. Contactá al administrador.` });
+      }
+
+      orgId = acceso.ret_org_id || acceso.org_id || null;
+
+      // Usar el nombre cargado en el panel admin (nombre_docente de organizaciones)
+      if (acceso.nombre_docente) {
+        nombreDocente = acceso.nombre_docente;
+      }
+    }
+
+    const plan = esAdmin ? 'premium' : (acceso.plan || 'basico');
+    const sessionToken = crearToken(email, nombreDocente, payload.picture, orgId, plan);
+    res.json({
+      ok: true,
+      sessionToken,
+      nombre: nombreDocente,
+      email,
+      foto: payload.picture,
+      orgId,
+      plan,
+      esAdmin,
+      acceso: esAdmin ? { estado: 'activo', diasRestantes: null } : {
+        estado: acceso.estado,
+        diasRestantes: acceso.dias_restantes ?? null,
+      },
+    });
+  } catch (e) {
+    console.error('[verify-token]', e.message);
+    res.status(401).json({ error: 'Token de Google inválido o expirado.' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// Claude API proxy
+// ══════════════════════════════════════════════════════════════
+const SYSTEM_PERFIL = `Sos un Asesor Psicopedagógico Experto y Supervisor de la Dirección de Educación Especial de la Provincia de Buenos Aires (DGCyE), Argentina. Trabajás junto a Ayelén Florentin, Docente de Inclusión (AP). Pensás, redactás y estructurás todas tus sugerencias, informes y análisis bajo el marco de la Resolución 1664/17 y normativas bonaerenses vigentes.
+
+TERMINOLOGÍA OBLIGATORIA — NUNCA uses los términos de la columna izquierda:
+- "Maestra Integradora" → decí "Docente de Inclusión" o "AP"
+- "Adaptación Curricular" → decí "Ajustes razonables"
+- "Discapacitado / Enfermito / Retraso / Defecto" → decí "Alumno con discapacidad" o "Barreras al Aprendizaje y la Participación (BAP)"
+- "Gabinete" → decí "EOE" (Equipo de Orientación Escolar) o "EDI" (Equipo Interdisciplinario)
+- "Grado" (secundaria) → decí "Año" y "División"
+- "Asignatura / Boleta / Colegio / Maestro" → decí "Materia / Boletín / Escuela / Docente"
+
+MARCO FILOSÓFICO:
+1. Modelo Social de la Discapacidad: el entorno genera Barreras (BAP), no el alumno. Sugerí configuraciones de apoyo materiales, metodológicas u organizativas para romper esas barreras.
+2. Foco en autonomía: registrá apoyos visuales, agendas de anticipación, flexibilización de tiempos y formas de evaluación alternativas (orales, gráficos, etc.).
+3. Articulación inclusiva: Aye trabaja en pareja pedagógica con el Docente de Grado (primaria) o Profesor de Materia (secundaria). Tus consejos deben facilitar esa convivencia y no aislar al alumno.
+
+TONO: Profesional, empático, técnico-pedagógico impecable. El texto debe poder copiarse directamente en un informe formal para un Inspector o Director.`;
+
+app.post('/api/claude', requireAuth, async (req, res) => {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'API key no configurada' });
+  try {
+    // Personalizar el system prompt con el nombre real de la docente
+    const nombreDocente = req.session.nombre || 'la Docente de Inclusión';
+    const systemPersonalizado = SYSTEM_PERFIL.replace(
+      'Ayelén Florentin, Docente de Inclusión (AP)',
+      `${nombreDocente}, Docente de Inclusión (AP)`
+    );
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model:      'claude-sonnet-4-5',
+        max_tokens: Math.min(req.body.max_tokens || 1000, 2500),
+        system:     systemPersonalizado,
+        messages:   req.body.messages,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('[Claude API error]', response.status, JSON.stringify(data));
+      return res.status(response.status).json({ error: data.error?.message || JSON.stringify(data) });
+    }
+    res.json(data);
+  } catch(e) {
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// Supabase DB endpoints — GET / POST / DELETE genéricos
+// ══════════════════════════════════════════════════════════════
+const TABLAS = ['escuelas','docentes','profesionales','alumnos','registros','avisos','documentos','usuarios'];
+
+TABLAS.forEach(tabla => {
+
+  // GET — lee y convierte snake_case → camelCase, filtrado por org_id
+  app.get(`/api/db/${tabla}`, requireAuth, async (req, res) => {
+    try {
+      let query = supabase.from(tabla).select('*');
+      if (req.orgId) query = query.eq('org_id', req.orgId);
+      // Filtros opcionales por query params
+      if (req.query.alumno_id) query = query.eq('alumno_id', req.query.alumno_id);
+      if (req.query.desde)     query = query.gte('fecha', req.query.desde);
+      if (req.query.hasta)     query = query.lte('fecha', req.query.hasta);
+      const { data, error } = await query;
+      if (error) throw error;
+      const m = MAPEO[tabla];
+      res.json(m ? data.map(m.desdeDB) : data);
+    } catch(e) {
+      console.error(`[GET] ${tabla}:`, e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // POST — convierte camelCase → snake_case, inyecta org_id, auto-strip columnas inexistentes
+  app.post(`/api/db/${tabla}`, requireAuth, async (req, res) => {
+    try {
+      const m = MAPEO[tabla];
+      let body = m ? m.paraDB(req.body) : req.body;
+      // Siempre inyectar org_id del token — no se puede falsificar desde el cliente
+      if (req.orgId) body = { ...body, org_id: req.orgId };
+      // Auto-strip: si Supabase rechaza un campo, lo quitamos y reintentamos
+      for(let i = 0; i < 5; i++) {
+        const { data, error } = await supabase.from(tabla).upsert(body).select();
+        if(!error) return res.json(m ? data.map(m.desdeDB) : data);
+        const colMatch = error.message && error.message.match(/Could not find the '([^']+)' column/);
+        if(colMatch) {
+          const campo = colMatch[1];
+          console.warn(`[DB] strip column '${campo}' de '${tabla}'`);
+          const { [campo]: _, ...resto } = body;
+          body = resto;
+          continue;
+        }
+        // FK constraint → poner a null el campo FK y reintentar
+        const fkMatch = error.message && error.message.match(/violates foreign key constraint/);
+        if(fkMatch) {
+          console.warn(`[DB] FK constraint en '${tabla}', limpiando escuela_id`);
+          body = { ...body, escuela_id: null };
+          continue;
+        }
+        throw error;
+      }
+      throw new Error('Demasiados reintentos en ' + tabla);
+    } catch(e) {
+      console.error(`[POST] ${tabla}:`, e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // DELETE — soft delete, verificar org_id
+  app.delete(`/api/db/${tabla}/:id`, requireAuth, async (req, res) => {
+    try {
+      let q = supabase.from(tabla).update({ eliminado: true }).eq('id', req.params.id);
+      if (req.orgId) q = q.eq('org_id', req.orgId); // solo puede borrar lo suyo
+      const { data, error } = await q.select();
+      if (error) throw error;
+      res.json(data);
+    } catch(e) { res.status(500).json({ error: e.message }); }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/db/registros/bulk — guarda array de registros de un alumno
+// Body: { alumnoId, registros: [] }
+// ══════════════════════════════════════════════════════════════
+app.post('/api/db/registros/bulk', requireAuth, async (req, res) => {
+  try {
+    const { alumnoId, registros } = req.body;
+    if (!alumnoId || !Array.isArray(registros)) return res.status(400).json({ error: 'alumnoId y registros requeridos' });
+    const rows = registros.map(r => ({ ...regParaDB({ ...r, alumnoId }), ...(req.orgId ? { org_id: req.orgId } : {}) }));
+    const { data, error } = await supabase.from('registros').upsert(rows).select();
+    if (error) throw error;
+    res.json({ ok: true, insertados: data.length });
+  } catch(e) {
+    console.error('[registros/bulk]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/seed — carga masiva de datos demo
+// Body: { tabla, items: [] }
+// ══════════════════════════════════════════════════════════════
+// /api/seed deshabilitado en producción
+app.post('/api/seed', (req, res, next) => {
+  if (process.env.NODE_ENV === 'production') return res.status(403).json({ error: 'No disponible en producción' });
+  next();
+}, requireAuth, async (req, res) => {
+  try {
+    const { tabla, items } = req.body;
+    if (!tabla || !Array.isArray(items)) return res.status(400).json({ error: 'tabla e items requeridos' });
+    const m = MAPEO[tabla];
+    let rows = m ? items.map(m.paraDB) : items;
+    // Auto-strip columnas inexistentes + manejo FK
+    for(let i = 0; i < 5; i++) {
+      const { data, error } = await supabase.from(tabla).upsert(rows).select();
+      if(!error) return res.json({ ok: true, insertados: data.length });
+      const colMatch = error.message && error.message.match(/Could not find the '([^']+)' column/);
+      if(colMatch) {
+        const campo = colMatch[1];
+        console.warn(`[seed] strip '${campo}' de '${tabla}'`);
+        rows = rows.map(r => { const { [campo]: _, ...resto } = r; return resto; });
+        continue;
+      }
+      const fkMatch = error.message && error.message.match(/violates foreign key constraint/);
+      if(fkMatch) {
+        console.warn(`[seed] FK constraint en '${tabla}', limpiando FK fields`);
+        rows = rows.map(r => ({ ...r, escuela_id: null, alumno_id: null }));
+        continue;
+      }
+      throw error;
+    }
+    throw new Error('Demasiados reintentos en seed ' + tabla);
+  } catch(e) {
+    console.error('[seed]', tabla, e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// Health check
+// ══════════════════════════════════════════════════════════════
+app.get('/api/health', async (req, res) => {
+  const { error } = await supabase.from('escuelas').select('count').limit(1);
+  res.json({ status: 'ok', supabase: error ? 'error' : 'conectado', timestamp: new Date().toISOString() });
+});
+
+// ══════════════════════════════════════════════════════════════
+// Páginas
+// ══════════════════════════════════════════════════════════════
+app.get('/config', (req, res) => res.sendFile(path.join(__dirname, 'public', 'config.html')));
+app.get('/docs',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'docs.html')));
+app.get('/',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('*',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+app.listen(PORT, () => {
+  console.log(`Aye app corriendo en http://localhost:${PORT}`);
+});

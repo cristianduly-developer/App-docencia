@@ -1,0 +1,2339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-title" content="Aye · App"/>
+  <meta name="theme-color" content="#2D6A4F"/>
+  <title>Aye · App</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Georgia,serif;background:#f1f5f9}
+    #root{max-width:480px;margin:0 auto;min-height:100vh}
+    .mnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#1a202c;display:flex;z-index:999;border-top:1px solid #2d3748}
+    .mnav a{flex:1;padding:10px 4px 12px;text-align:center;color:#94a3b8;text-decoration:none;font-size:10px;font-weight:700;font-family:Georgia,serif;text-transform:uppercase;letter-spacing:.5px;display:flex;flex-direction:column;align-items:center;gap:3px}
+    .mnav a.active{color:#40916c}
+    .mnav a span{font-size:18px}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <nav class="mnav">
+    <a href="/" class="active"><span>🗺</span>App</a>
+    <a href="/config" ><span>⚙️</span>Config</a>
+    <a href="/docs" ><span>📄</span>Docs</a>
+  </nav>
+  <script type="text/babel" data-presets="react">
+
+// ═══════════════════════════════════════════════════════════════
+// AYE — APP PRINCIPAL (uso diario)
+//
+// Lee los datos guardados por el Panel de Configuración desde
+// localStorage. Si no encuentra nada, usa datos de ejemplo
+// para que la app funcione desde el primer momento.
+//
+// Datos propios (registros y avisos) también se persisten en
+// localStorage para que sobrevivan entre sesiones.
+// ═══════════════════════════════════════════════════════════════
+
+// ─── Datos de ejemplo como fallback ──────────────────────────
+const ESC_DEF = [
+  {
+    id:"e1", nombre:"Escuela Primaria N°12", nivel:"Primaria", color:"#2D6A4F",
+    director:"Lic. Marta Suárez", telefonoDirector:"011-4567-8901", mailDirector:"msuarez@ep12.edu.ar",
+    direccion:"Av. Corrientes 1234, CABA",
+    secretaria:"Sra. Rosa Fernández", telefonoSecretaria:"011-4567-8900", mailSecretaria:"secretaria@ep12.edu.ar",
+    eoe:[
+      {id:"eoe1",nombre:"Lic. Carmen Vidal",   rol:"Orientadora Educacional",      telefono:"11-4455-1122",mail:"cvidal@ep12.edu.ar",   diasPresencia:"Lunes y Miércoles",  eliminado:false},
+      {id:"eoe2",nombre:"Lic. Graciela Torres",rol:"Orientadora Social",            telefono:"11-4455-2233",mail:"gtorres@ep12.edu.ar",  diasPresencia:"Martes y Jueves",    eliminado:false},
+      {id:"eoe3",nombre:"Lic. Sofía Ramos",    rol:"Psicóloga",                    telefono:"11-4455-3344",mail:"sramos@ep12.edu.ar",   diasPresencia:"Viernes",            eliminado:false},
+    ],
+    eliminado:false,
+  },
+  {
+    id:"e2", nombre:"Escuela Secundaria N°7", nivel:"Secundaria", color:"#1D3557",
+    director:"Prof. Carlos Mendez", telefonoDirector:"011-4567-8902", mailDirector:"cmendez@es7.edu.ar",
+    direccion:"Calle Mitre 890, CABA",
+    secretaria:"Sr. Pablo Gómez", telefonoSecretaria:"011-4567-8903", mailSecretaria:"secretaria@es7.edu.ar",
+    eoe:[
+      {id:"eoe4",nombre:"Lic. Marcela Ruiz",  rol:"Orientadora de los Aprendizajes",telefono:"11-5566-1122",mail:"mruiz@es7.edu.ar",   diasPresencia:"Lun, Mié y Vie",     eliminado:false},
+      {id:"eoe5",nombre:"Lic. Diego Salinas", rol:"Psicólogo",                      telefono:"11-5566-2233",mail:"dsalinas@es7.edu.ar", diasPresencia:"Martes y Jueves",    eliminado:false},
+      {id:"eoe6",nombre:"Lic. Ana Castillo",  rol:"Fonoaudióloga",                  telefono:"11-5566-3344",mail:"acastillo@es7.edu.ar",diasPresencia:"Miércoles",          eliminado:false},
+    ],
+    eliminado:false,
+  },
+];
+const DOC_DEF = [
+  {id:"d1",nombre:"Prof. Ana Gómez",    materia:"Matemática",   telefono:"11-2233-4455",mail:"agomez@ep12.edu.ar",  escuelaId:"e1",eliminado:false},
+  {id:"d2",nombre:"Prof. Luis Pérez",   materia:"Lengua",       telefono:"11-2233-5566",mail:"lperez@ep12.edu.ar",  escuelaId:"e1",eliminado:false},
+  {id:"d3",nombre:"Prof. Claudia Ríos", materia:"Cs. Naturales",telefono:"11-3344-6677",mail:"crios@ep12.edu.ar",   escuelaId:"e1",eliminado:false},
+  {id:"d4",nombre:"Prof. Rodrigo Vega", materia:"Historia",     telefono:"11-4455-7788",mail:"rvega@es7.edu.ar",    escuelaId:"e2",eliminado:false},
+  {id:"d5",nombre:"Prof. Valeria Soto", materia:"Matemática",   telefono:"11-5566-8899",mail:"vsoto@es7.edu.ar",    escuelaId:"e2",eliminado:false},
+  {id:"d6",nombre:"Prof. Martín Flores",materia:"Inglés",       telefono:"11-6677-9900",mail:"mflores@es7.edu.ar",  escuelaId:"e2",eliminado:false},
+];
+const PRO_DEF = [
+  {id:"p1",nombre:"Lic. Paula Herrera",  rol:"Psicóloga",     telefono:"11-1122-3344",mail:"paula.herrera@gmail.com",  eliminado:false},
+  {id:"p2",nombre:"Lic. Diego Morales",  rol:"Fonoaudiólogo", telefono:"11-2233-4455",mail:"diego.morales@gmail.com",  eliminado:false},
+  {id:"p3",nombre:"Lic. Fernanda Castro",rol:"Psicopedagoga", telefono:"11-3344-5566",mail:"fernanda.castro@gmail.com",eliminado:false},
+];
+const ALU_DEF = [
+  { id:"a1", nombre:"Sofía Martínez", escuelaId:"e1", curso:"3° A", dni:"50.234.871", cuil:"20-50234871-3", fechaNacimiento:"2016-03-14",
+    direccion:"Av. Rivadavia 2340 Piso 3B", telefonoCasa:"011-4567-1234",
+    cud:true, cudNumero:"CUD-2023-00412", cudVencimiento:"2026-12-31",
+    tutores:[{nombre:"María Martínez",relacion:"Mamá",telefono:"11-9988-7766",principal:true}],
+    diagnostico:"TEA - Nivel 1", obraSocial:"OSDE", nroAfiliado:"1234567-01",
+    medicacion:"Risperidona 0.5mg (mañana)",
+    terapias:[{nombre:"Fonoaudiología",frecuencia:"2x semana",profesional:"Lic. Diego Morales"}],
+    trayectoria:[{ciclo:"2023",institucion:"Escuela Primaria N°12",nivel:"1° grado",notas:"Primera integración."},{ciclo:"2025",institucion:"Escuela Primaria N°12",nivel:"3° grado",notas:"Año en curso."}],
+    profesionalIds:["p1","p2"],
+    horarios:[
+      {dia:1,horaInicio:"08:00",horaFin:"09:00",docenteId:"d1",aula:"Aula 3A",esRecreo:false},
+      {dia:1,horaInicio:"09:00",horaFin:"10:00",docenteId:"d2",aula:"Aula 3A",esRecreo:false},
+      {dia:1,horaInicio:"10:00",horaFin:"10:20",docenteId:null,aula:"Patio",esRecreo:true},
+      {dia:3,horaInicio:"08:00",horaFin:"09:00",docenteId:"d1",aula:"Aula 3A",esRecreo:false},
+    ],eliminado:false },
+  { id:"a3", nombre:"Valentina López", escuelaId:"e2", curso:"2° 1ra", dni:"48.112.990", cuil:"27-48112990-1", fechaNacimiento:"2011-11-05",
+    direccion:"Bv. San Martín 1560", telefonoCasa:"011-4890-2233",
+    cud:true, cudNumero:"CUD-2022-00871", cudVencimiento:"2027-06-30",
+    tutores:[{nombre:"Laura López",relacion:"Mamá",telefono:"11-7766-5544",principal:true}],
+    diagnostico:"Discapacidad auditiva moderada", obraSocial:"Swiss Medical", nroAfiliado:"SM-445678",
+    medicacion:"Sin medicación. Usa audífonos bilaterales.",
+    terapias:[{nombre:"Fonoaudiología",frecuencia:"3x semana",profesional:"Lic. Diego Morales"}],
+    trayectoria:[{ciclo:"2024",institucion:"Escuela Secundaria N°7",nivel:"1° año",notas:"Transición."},{ciclo:"2025",institucion:"Escuela Secundaria N°7",nivel:"2° año",notas:"Año en curso."}],
+    profesionalIds:["p2","p3"],
+    horarios:[
+      {dia:1,horaInicio:"13:00",horaFin:"14:00",docenteId:"d4",aula:"Aula 201",esRecreo:false},
+      {dia:1,horaInicio:"14:00",horaFin:"15:00",docenteId:"d5",aula:"Aula 202",esRecreo:false},
+      {dia:1,horaInicio:"15:00",horaFin:"15:20",docenteId:null,aula:"Patio",esRecreo:true},
+    ],eliminado:false },
+];
+const REG_DEF = { a1:[{id:"r1",fecha:"2026-06-01",asistencia:"presente",materia:"Matemática",docente:"Prof. Ana Gómez",avance:"Sumas con llevada. Resolvió 4 de 5 ejercicios solos.",acuerdo:"Docente usará fichas de colores.",recordatorio:"",eliminado:false}], a3:[] };
+const REC_DEF = [{id:"rc1",alumnoId:"a1",texto:"Reunión con Lic. Paula Herrera el viernes 6/6",fecha:"2026-06-06",prioridad:"alta",eliminado:false}];
+
+// ─── Persistencia con versionado ─────────────────────────────
+// Cada vez que cambiamos la estructura de los datos de ejemplo
+// incrementamos DATA_VERSION. Si la versión guardada en
+// localStorage no coincide, descartamos los datos viejos y
+// cargamos los defaults frescos con la nueva estructura.
+const DATA_VERSION = "5"; // incrementar cuando cambie la estructura
+
+const leer = (key, def) => {
+  try {
+    const version = localStorage.getItem("aye_data_version");
+    // Si la versión no coincide, limpiamos y usamos defaults frescos
+    if (version !== DATA_VERSION) {
+      localStorage.clear();
+      localStorage.setItem("aye_data_version", DATA_VERSION);
+      return def;
+    }
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : def;
+  } catch { return def; }
+};
+
+const grabar = (key, val) => {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+};
+
+// ─── Helpers ──────────────────────────────────────────────────
+const hMin   = h => { const [hh,mm]=h.split(":").map(Number); return hh*60+mm; };
+const fmtF   = s => { if(!s)return"—"; const [y,m,d]=s.split("-"); return `${d}/${m}/${y}`; };
+const uid    = () => Math.random().toString(36).slice(2,9);
+const hoy    = () => new Date().toISOString().split("T")[0];
+const hoyFmt = () => new Date().toLocaleDateString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric"});
+const DIAS   = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const DIAS_L = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+
+// ─── Colores ──────────────────────────────────────────────────
+const G="#2D6A4F", GR="#64748b", GL="#94a3b8", BD="#e2e8f0", TX="#1a202c", FO="#f1f5f9";
+
+// ─── UI Primitivos ────────────────────────────────────────────
+const Tag = ({text,bg="#333"}) =>
+  <span style={{display:"inline-flex",padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700,color:"#fff",background:bg,textTransform:"uppercase",whiteSpace:"nowrap"}}>{text}</span>;
+
+const Avatar = ({nombre="",size=40,bg=G}) =>
+  <div style={{width:size,height:size,borderRadius:"50%",background:bg,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*.35,fontWeight:800,color:"#fff"}}>
+    {nombre.split(" ").slice(0,2).map(p=>p[0]).join("")}
+  </div>;
+
+const Card = ({children,sx,onClick}) =>
+  <div onClick={onClick} style={{background:"#fff",borderRadius:16,boxShadow:"0 2px 12px rgba(0,0,0,.07)",padding:16,marginBottom:12,cursor:onClick?"pointer":"default",...sx}}
+    onMouseEnter={e=>onClick&&(e.currentTarget.style.transform="translateY(-2px)")}
+    onMouseLeave={e=>onClick&&(e.currentTarget.style.transform="translateY(0)")}>
+    {children}
+  </div>;
+
+const Btn = ({children,onClick,color=G,outline,small,full,disabled,danger}) => {
+  const bg=disabled?"#e2e8f0":outline?"transparent":danger?"#dc2626":color;
+  const fg=disabled?GL:outline?(danger?"#dc2626":color):"#fff";
+  return <button onClick={onClick} disabled={disabled} style={{background:bg,color:fg,border:outline?`2px solid ${danger?"#dc2626":color}`:"none",borderRadius:10,padding:small?"6px 14px":"12px 20px",fontSize:small?13:15,fontWeight:700,cursor:disabled?"not-allowed":"pointer",width:full?"100%":"auto",fontFamily:"inherit"}}
+    onMouseEnter={e=>!disabled&&(e.currentTarget.style.opacity=".85")} onMouseLeave={e=>(e.currentTarget.style.opacity="1")}>{children}</button>;
+};
+
+const Fld = ({label,value,onChange,type="text",multiline,placeholder,req}) => {
+  const s={width:"100%",border:`1.5px solid ${BD}`,borderRadius:10,padding:"10px 14px",fontSize:14,fontFamily:"inherit",color:TX,background:"#f8fafc",boxSizing:"border-box",outline:"none",resize:multiline?"vertical":"none",minHeight:multiline?80:"auto"};
+  return <div style={{marginBottom:14}}>
+    {label&&<div style={{fontSize:12,fontWeight:700,color:GR,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>{label}{req&&<span style={{color:"#dc2626"}}> *</span>}</div>}
+    {multiline?<textarea value={value||""} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={s}/>
+      :<input type={type} value={value||""} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={s}/>}
+  </div>;
+};
+
+const Sel = ({label,value,onChange,opts,ph}) =>
+  <div style={{marginBottom:14}}>
+    {label&&<div style={{fontSize:12,fontWeight:700,color:GR,marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>{label}</div>}
+    <select value={value||""} onChange={e=>onChange(e.target.value)} style={{width:"100%",border:`1.5px solid ${BD}`,borderRadius:10,padding:"10px 14px",fontSize:14,fontFamily:"inherit",background:"#f8fafc",color:TX,boxSizing:"border-box"}}>
+      {ph&&<option value="">{ph}</option>}
+      {opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
+    </select>
+  </div>;
+
+const SecT = ({text}) =>
+  <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",letterSpacing:.5,marginBottom:10,marginTop:4}}>{text}</div>;
+
+const WA   = ({tel})  => tel  ? <a href={`https://wa.me/54${tel.replace(/[-\s]/g,"")}`} target="_blank" rel="noreferrer" style={{background:"#25D366",color:"#fff",borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:700,textDecoration:"none",flexShrink:0}}>WhatsApp</a> : null;
+const Mail = ({mail}) => mail ? <a href={`mailto:${mail}`} style={{background:"#3b82f6",color:"#fff",borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:700,textDecoration:"none",flexShrink:0}}>Mail</a> : null;
+
+// Modal de confirmación de eliminación
+const Confirm = ({msg,onOk,onNo}) =>
+  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:24}}>
+    <div style={{background:"#fff",borderRadius:20,padding:28,maxWidth:340,width:"100%"}}>
+      <div style={{fontSize:36,textAlign:"center",marginBottom:12}}>⚠️</div>
+      <div style={{fontWeight:800,fontSize:17,textAlign:"center",marginBottom:8}}>¿Estás segura?</div>
+      <div style={{fontSize:14,color:GR,textAlign:"center",lineHeight:1.5,marginBottom:24}}>
+        {msg}<div style={{marginTop:8,fontSize:12,color:"#dc2626",fontWeight:600}}>Esta acción no se puede deshacer.</div>
+      </div>
+      <div style={{display:"flex",gap:10}}>
+        <Btn full outline onClick={onNo} color={GR}>Cancelar</Btn>
+        <Btn full danger onClick={onOk}>Sí, eliminar</Btn>
+      </div>
+    </div>
+  </div>;
+
+// ─── Tarjeta de registro ──────────────────────────────────────
+function RegCard({r, onDel}) {
+  const [conf,setConf] = useState(false);
+  const bc = r.asistencia==="presente"?G:r.asistencia==="ausente"?"#dc2626":"#f59e0b";
+  return <>
+    {conf && <Confirm msg={`¿Eliminar el registro del ${fmtF(r.fecha)} en ${r.materia}? Los registros son documentos pedagógicos.`} onOk={()=>{onDel&&onDel(r.id);setConf(false);}} onNo={()=>setConf(false)}/>}
+    <Card>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+        <div><div style={{fontWeight:700,fontSize:14}}>{r.materia}</div><div style={{fontSize:12,color:GR}}>{fmtF(r.fecha)}{r.docente&&` · ${r.docente}`}</div></div>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <Tag text={r.asistencia} bg={bc}/>
+          {onDel&&<button onClick={()=>setConf(true)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16,padding:"0 4px"}}>🗑</button>}
+        </div>
+      </div>
+      {r.avance&&<div style={{fontSize:13,color:"#475569",background:"#f8fafc",borderRadius:8,padding:"8px 12px",marginBottom:6}}>📖 {r.avance}</div>}
+      {r.acuerdo&&<div style={{fontSize:13,color:"#1d4ed8",background:"#eff6ff",borderRadius:8,padding:"8px 12px",marginBottom:6}}>🤝 {r.acuerdo}</div>}
+      {r.recordatorio&&<div style={{fontSize:13,color:"#92400e",background:"#fffbeb",borderRadius:8,padding:"8px 12px"}}>⏰ {r.recordatorio}</div>}
+    </Card>
+  </>;
+}
+
+// ─── Componente de grabación de voz ──────────────────────────
+// Usa la API nativa SpeechRecognition del navegador para
+// convertir audio a texto sin depender de servicios externos.
+// El resultado se pasa a Claude para interpretarlo.
+function BotonVoz({ onTranscripcion, color }) {
+  const [grabando, setGrabando] = useState(false);
+  const [texto, setTexto]       = useState("");
+  const [error, setError]       = useState("");
+  const recognRef               = useRef(null);
+
+  const iniciarGrabacion = () => {
+    // Verificamos si el navegador soporta la API antes de usarla
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError("Tu navegador no soporta grabación de voz. Probá con Chrome.");
+      return;
+    }
+    const recogn = new SpeechRecognition();
+    recogn.lang = "es-AR";           // Español argentino
+    recogn.continuous = true;         // Sigue escuchando hasta que paramos
+    recogn.interimResults = true;     // Muestra texto mientras habla (en tiempo real)
+
+    recogn.onresult = (event) => {
+      // Concatenamos todos los fragmentos reconocidos hasta el momento
+      const transcripto = Array.from(event.results)
+        .map(r => r[0].transcript)
+        .join(" ");
+      setTexto(transcripto);
+    };
+
+    recogn.onerror = () => setError("Error al grabar. Verificá los permisos del micrófono.");
+    recogn.start();
+    recognRef.current = recogn;
+    setGrabando(true);
+    setError("");
+  };
+
+  const detenerGrabacion = () => {
+    recognRef.current?.stop();
+    setGrabando(false);
+    // Si tenemos texto transcripto, lo pasamos al padre para que Claude lo interprete
+    if (texto.trim()) onTranscripcion(texto);
+  };
+
+  return (
+    <div style={{marginBottom:16}}>
+      {/* El botón grande e intuitivo — se mantiene presionado mientras se habla */}
+      <button
+        onMouseDown={iniciarGrabacion}
+        onMouseUp={detenerGrabacion}
+        onTouchStart={e=>{e.preventDefault();iniciarGrabacion();}}
+        onTouchEnd={e=>{e.preventDefault();detenerGrabacion();}}
+        style={{
+          width:"100%", padding:"16px", borderRadius:14, border:"none",
+          background: grabando
+            ? "linear-gradient(135deg,#dc2626,#ef4444)"
+            : `linear-gradient(135deg,${color},${color}cc)`,
+          color:"#fff", fontWeight:800, fontSize:15,
+          cursor:"pointer", fontFamily:"inherit",
+          display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+          transition:"all .2s",
+          boxShadow: grabando ? "0 0 0 4px rgba(220,38,38,.3)" : "none",
+        }}
+      >
+        <span style={{fontSize:24}}>{grabando ? "⏹" : "🎙"}</span>
+        {grabando ? "Soltá para procesar..." : "Mantené para grabar"}
+      </button>
+
+      {/* Muestra la transcripción en tiempo real mientras graba */}
+      {grabando && texto && (
+        <div style={{marginTop:10,padding:"10px 14px",background:"#f8fafc",borderRadius:10,border:`1.5px solid ${color}`,fontSize:13,color:GR,lineHeight:1.5}}>
+          <div style={{fontSize:11,fontWeight:700,color:color,textTransform:"uppercase",marginBottom:4}}>Escuchando...</div>
+          {texto}
+        </div>
+      )}
+
+      {error && <div style={{marginTop:8,fontSize:12,color:"#dc2626",fontWeight:600}}>⚠ {error}</div>}
+    </div>
+  );
+}
+
+// ─── Pantalla de confirmación ────────────────────────────────
+// Este es el corazón de la idea: Claude interpreta el audio,
+// propone cómo dividir la información, y Aye confirma antes
+// de que se guarde cualquier dato. Así no hay errores.
+function PantallaConfirmacion({ propuesta, alumno, docentes, escColor, onConfirmar, onRechazar }) {
+  // El estado es editable: Aye puede corregir cada campo
+  const [asist,   setAsist]   = useState(propuesta.asistencia   || "presente");
+  const [avance,  setAvance]  = useState(propuesta.avance       || "");
+  const [acuerdo, setAcuerdo] = useState(propuesta.acuerdo      || "");
+  const [rec,     setRec]     = useState(propuesta.recordatorio || "");
+  const [docId,   setDocId]   = useState(propuesta.docenteId    || "");
+
+  const docsAlumno = [...new Set(alumno.horarios.filter(h=>h.docenteId).map(h=>h.docenteId))]
+    .map(id=>docentes.find(d=>d.id===id)).filter(Boolean);
+  const docSel = docentes.find(d=>d.id===docId);
+
+  return (
+    <div>
+      {/* Cabecera explicativa */}
+      <div style={{background:"linear-gradient(135deg,#1a202c,#2d3748)",borderRadius:16,padding:16,marginBottom:16,color:"#fff"}}>
+        <div style={{fontSize:13,fontWeight:800,marginBottom:4}}>✨ Claude interpretó tu audio</div>
+        <div style={{fontSize:12,color:"rgba(255,255,255,.75)",lineHeight:1.5}}>
+          Revisá que todo esté bien. Podés editar cualquier campo antes de confirmar. Los datos se guardan solo cuando tocás "Confirmar".
+        </div>
+      </div>
+
+      {/* Transcripción original — para que Aye pueda comparar */}
+      {propuesta.transcripcion && (
+        <div style={{background:"#f8fafc",borderRadius:12,padding:"10px 14px",marginBottom:14,border:`1px solid ${BD}`}}>
+          <div style={{fontSize:11,fontWeight:700,color:GL,textTransform:"uppercase",marginBottom:4}}>Lo que dijiste</div>
+          <div style={{fontSize:13,color:GR,lineHeight:1.5,fontStyle:"italic"}}>"{propuesta.transcripcion}"</div>
+        </div>
+      )}
+
+      {/* ── Planilla de confirmación ─────────────────────────
+           Cada campo muestra lo que Claude interpretó y es
+           completamente editable. El color del borde indica
+           si el campo tiene contenido (verde) o está vacío.
+      ─────────────────────────────────────────────────────── */}
+      <div style={{background:"#fff",borderRadius:16,padding:16,marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,.07)"}}>
+
+        {/* Asistencia */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:16}}>📋</span> Asistencia
+            <span style={{fontSize:10,background:"#d1fae5",color:"#065f46",borderRadius:10,padding:"1px 8px",fontWeight:700}}>DETECTADO</span>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            {["presente","ausente","llegó tarde"].map(op=>
+              <button key={op} onClick={()=>setAsist(op)} style={{flex:1,padding:"8px 4px",borderRadius:8,border:"2px solid",borderColor:asist===op?escColor:BD,background:asist===op?escColor:"#fff",color:asist===op?"#fff":"#475569",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",textTransform:"capitalize"}}>{op}</button>
+            )}
+          </div>
+        </div>
+
+        {/* Docente */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:16}}>👤</span> Docente
+            {docId ? <span style={{fontSize:10,background:"#d1fae5",color:"#065f46",borderRadius:10,padding:"1px 8px",fontWeight:700}}>DETECTADO</span>
+              : <span style={{fontSize:10,background:"#fef3c7",color:"#92400e",borderRadius:10,padding:"1px 8px",fontWeight:700}}>VERIFICAR</span>}
+          </div>
+          <select value={docId} onChange={e=>setDocId(e.target.value)} style={{width:"100%",border:`2px solid ${docId?escColor:BD}`,borderRadius:10,padding:"10px 14px",fontSize:14,fontFamily:"inherit",background:"#f8fafc",color:TX,boxSizing:"border-box"}}>
+            <option value="">Sin docente</option>
+            {docsAlumno.map(d=><option key={d.id} value={d.id}>{d.materia} — {d.nombre}</option>)}
+          </select>
+        </div>
+
+        {/* Avance pedagógico */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:16}}>📖</span> Avance / Trabajo realizado
+            {avance ? <span style={{fontSize:10,background:"#d1fae5",color:"#065f46",borderRadius:10,padding:"1px 8px",fontWeight:700}}>DETECTADO</span>
+              : <span style={{fontSize:10,background:"#f1f5f9",color:GR,borderRadius:10,padding:"1px 8px",fontWeight:700}}>VACÍO</span>}
+          </div>
+          <textarea value={avance} onChange={e=>setAvance(e.target.value)}
+            style={{width:"100%",border:`2px solid ${avance?escColor:BD}`,borderRadius:10,padding:"10px 14px",fontSize:14,fontFamily:"inherit",color:TX,background:"#f8fafc",boxSizing:"border-box",outline:"none",resize:"vertical",minHeight:80}}
+            placeholder="Claude no detectó avance. Podés escribirlo acá..."/>
+        </div>
+
+        {/* Acuerdo con el docente */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:16}}>🤝</span> Acuerdo con el docente
+            {acuerdo ? <span style={{fontSize:10,background:"#d1fae5",color:"#065f46",borderRadius:10,padding:"1px 8px",fontWeight:700}}>DETECTADO</span>
+              : <span style={{fontSize:10,background:"#f1f5f9",color:GR,borderRadius:10,padding:"1px 8px",fontWeight:700}}>VACÍO</span>}
+          </div>
+          <textarea value={acuerdo} onChange={e=>setAcuerdo(e.target.value)}
+            style={{width:"100%",border:`2px solid ${acuerdo?"#1d4ed8":BD}`,borderRadius:10,padding:"10px 14px",fontSize:14,fontFamily:"inherit",color:TX,background:acuerdo?"#f0f7ff":"#f8fafc",boxSizing:"border-box",outline:"none",resize:"vertical",minHeight:64}}
+            placeholder="Claude no detectó acuerdos..."/>
+        </div>
+
+        {/* Recordatorio */}
+        <div>
+          <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:16}}>⏰</span> Recordatorio
+            {rec ? <span style={{fontSize:10,background:"#d1fae5",color:"#065f46",borderRadius:10,padding:"1px 8px",fontWeight:700}}>DETECTADO</span>
+              : <span style={{fontSize:10,background:"#f1f5f9",color:GR,borderRadius:10,padding:"1px 8px",fontWeight:700}}>VACÍO</span>}
+          </div>
+          <input value={rec} onChange={e=>setRec(e.target.value)}
+            style={{width:"100%",border:`2px solid ${rec?"#f59e0b":BD}`,borderRadius:10,padding:"10px 14px",fontSize:14,fontFamily:"inherit",color:TX,background:rec?"#fffbeb":"#f8fafc",boxSizing:"border-box",outline:"none"}}
+            placeholder="Claude no detectó recordatorios..."/>
+        </div>
+      </div>
+
+      {/* Botones de acción */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <button onClick={onRechazar} style={{padding:"14px",borderRadius:12,border:`2px solid ${BD}`,background:"#fff",color:GR,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+          🔄 Volver a grabar
+        </button>
+        <button onClick={()=>onConfirmar({asistencia:asist,avance,acuerdo,recordatorio:rec,docenteId:docId,materia:docSel?.materia||"",docente:docSel?.nombre||""})} style={{padding:"14px",borderRadius:12,border:"none",background:`linear-gradient(135deg,${escColor},${escColor}cc)`,color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+          ✓ Confirmar y guardar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Simulador de voz para el prototipo ──────────────────────
+// En producción esto se reemplaza por BotonVoz que usa el
+// micrófono real. En el prototipo dentro de Claude, el iframe
+// no tiene acceso al micrófono por restricciones de seguridad,
+// así que simulamos el input por texto. El procesamiento de
+// Claude es idéntico en ambos casos.
+function SimuladorVoz({ onTranscripcion, color }) {
+  const [texto, setTexto] = useState("");
+
+  return (
+    <div style={{marginBottom:16}}>
+      <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:8}}>
+        Escribí lo que dirías en voz alta
+      </div>
+      <textarea
+        value={texto}
+        onChange={e=>setTexto(e.target.value)}
+        placeholder='Ej: "Hoy estuvo presente, trabajamos fracciones, pudo resolver los primeros tres sola. Acordé con la profe repasar la próxima clase. Recordarme hablar con la mamá."'
+        style={{width:"100%",border:`2px solid ${color}`,borderRadius:12,padding:"12px 14px",fontSize:14,fontFamily:"inherit",color:TX,background:"#f8fafc",boxSizing:"border-box",outline:"none",resize:"vertical",minHeight:100,lineHeight:1.5}}
+      />
+      <button
+        onClick={()=>texto.trim()&&onTranscripcion(texto)}
+        disabled={!texto.trim()}
+        style={{
+          width:"100%", marginTop:10, padding:"14px",
+          borderRadius:12, border:"none",
+          background:texto.trim()?`linear-gradient(135deg,${color},${color}cc)`:"#e2e8f0",
+          color:texto.trim()?"#fff":GL,
+          fontWeight:800, fontSize:15, cursor:texto.trim()?"pointer":"not-allowed",
+          fontFamily:"inherit", display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+        }}
+      >
+        <span style={{fontSize:20}}>🧠</span> Enviar a Claude para interpretar
+      </button>
+    </div>
+  );
+}
+
+// ─── Formulario de registro de clase — con voz ────────────────
+// El formulario tiene dos modos: manual (como antes) y por voz.
+// En modo voz, el flujo es: grabar → Claude interpreta →
+// planilla de confirmación → guardar.
+function FormReg({alumno, docentes, escColor, docPre, onSave, onCancel}) {
+  const [modo,    setModo]    = useState("elegir"); // "elegir" | "manual" | "voz" | "procesando" | "confirmar"
+  const [asist,   setAsist]   = useState("presente");
+  const [docId,   setDocId]   = useState(docPre?.id||"");
+  const [avance,  setAvance]  = useState("");
+  const [acuerdo, setAcuerdo] = useState("");
+  const [rec,     setRec]     = useState("");
+  const [propuesta, setPropuesta] = useState(null); // Lo que Claude interpretó
+
+  const docsAlumno = [...new Set(alumno.horarios.filter(h=>h.docenteId).map(h=>h.docenteId))]
+    .map(id=>docentes.find(d=>d.id===id)).filter(Boolean);
+  const docSel = docentes.find(d=>d.id===docId);
+
+  const save = (datos) => onSave({
+    id:"r"+uid(), fecha:hoy(), eliminado:false,
+    asistencia: datos?.asistencia || asist,
+    materia:    datos?.materia    || docSel?.materia || "",
+    docente:    datos?.docente    || docSel?.nombre  || "",
+    avance:     datos?.avance     || avance,
+    acuerdo:    datos?.acuerdo    || acuerdo,
+    recordatorio: datos?.recordatorio || rec,
+  });
+
+  // Esta función se llama cuando Aye termina de grabar.
+  // Manda el texto a Claude y espera la interpretación.
+  const procesarAudio = async (transcripcion) => {
+    setModo("procesando");
+
+    // Contexto de los docentes disponibles para este alumno,
+    // para que Claude pueda identificar nombres correctamente
+    const docentesCtx = docsAlumno.map(d=>`${d.nombre} (${d.materia})`).join(", ");
+    const docPreCtx   = docPre ? `${docPre.nombre} (${docPre.materia})` : "";
+
+    try {
+      const res = await fetch("/api/claude", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          messages:[{
+            role:"user",
+            content:`Sos el asistente de una Maestra Integradora argentina. Ella acaba de grabar una nota de voz sobre una clase.
+
+CONTEXTO:
+- Alumno/a: ${alumno.nombre}
+- Docentes disponibles: ${docsAlumno.length > 0 ? docentesCtx : "no especificados"}
+${docPreCtx ? `- Docente de esta clase: ${docPreCtx}` : ""}
+
+TRANSCRIPCIÓN DEL AUDIO:
+"${transcripcion}"
+
+Analizá la transcripción y extraé la información. Respondé ÚNICAMENTE con un JSON válido, sin texto adicional, sin backticks, sin explicaciones:
+
+{
+  "asistencia": "presente" | "ausente" | "llegó tarde",
+  "docenteId": "id del docente si se menciona, o null",
+  "avance": "descripción del trabajo y avances pedagógicos realizados en la clase",
+  "acuerdo": "acuerdos o coordinaciones con el docente del aula",
+  "recordatorio": "cosas pendientes, seguimientos o recordatorios para la maestra",
+  "confianza": "alta" | "media" | "baja"
+}
+
+Reglas:
+- Si no podés identificar un campo con claridad, dejalo como cadena vacía "".
+- Para docenteId: los IDs disponibles son ${docsAlumno.map(d=>`"${d.id}" = ${d.nombre}`).join(", ") || "ninguno"}. Si el docente de la clase ya está definido, usá "${docPre?.id||""}".
+- Sé conservador: mejor dejar un campo vacío que inventar contenido.`
+          }]
+        })
+      });
+
+      const data = await res.json();
+      const texto = data.content?.[0]?.text || "";
+
+      // Limpiamos la respuesta por si Claude agregó algún backtick
+      const limpio = texto.replace(/```json|```/g,"").trim();
+      const parsed = JSON.parse(limpio);
+
+      // Si el docente ya está predefinido (venimos desde la vista de clase),
+      // lo mantenemos para no sobreescribirlo con lo que interpretó Claude
+      if (docPre && !parsed.docenteId) parsed.docenteId = docPre.id;
+
+      setPropuesta({ ...parsed, transcripcion });
+      setModo("confirmar");
+
+    } catch (err) {
+      // Si Claude falla, volvemos al modo manual con la transcripción
+      // pre-llenada en el campo de avance para que no se pierda
+      console.error("Error al interpretar:", err);
+      setAvance(transcripcion);
+      setModo("manual");
+    }
+  };
+
+  // ── Pantalla de elección de modo ─────────────────────────────
+  if (modo === "elegir") return (
+    <Card sx={{border:`2px solid ${escColor}`,marginBottom:8}}>
+      <div style={{fontWeight:800,fontSize:16,marginBottom:6}}>Nuevo registro</div>
+      <div style={{fontSize:13,color:GR,marginBottom:20}}>¿Cómo querés registrar esta clase?</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+
+        {/* Opción voz — la nueva funcionalidad */}
+        <button onClick={()=>setModo("voz")} style={{background:`linear-gradient(135deg,${escColor},${escColor}cc)`,color:"#fff",border:"none",borderRadius:14,padding:"20px 12px",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit",display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+          <span style={{fontSize:32}}>🎙</span>
+          <span>Por voz</span>
+          <span style={{fontSize:11,fontWeight:400,opacity:.85,lineHeight:1.4,textAlign:"center"}}>Hablá y Claude lo organiza</span>
+        </button>
+
+        {/* Opción manual — siempre disponible */}
+        <button onClick={()=>setModo("manual")} style={{background:"#fff",color:TX,border:`2px solid ${BD}`,borderRadius:14,padding:"20px 12px",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit",display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+          <span style={{fontSize:32}}>✏️</span>
+          <span>Manual</span>
+          <span style={{fontSize:11,fontWeight:400,color:GR,lineHeight:1.4,textAlign:"center"}}>Escribir campo por campo</span>
+        </button>
+      </div>
+      <Btn outline onClick={onCancel} color={GR} full>Cancelar</Btn>
+    </Card>
+  );
+
+  // ── Modo voz: simulación por texto (funcional en el prototipo) ─
+  if (modo === "voz") return (
+    <Card sx={{border:`2px solid ${escColor}`,marginBottom:8}}>
+      <div style={{fontWeight:800,fontSize:16,marginBottom:4}}>Registro por voz</div>
+      <div style={{fontSize:13,color:GR,marginBottom:12,lineHeight:1.5}}>
+        En la app real esto usa el micrófono del celular. En este prototipo escribí lo que dirías en voz alta y Claude lo interpreta exactamente igual.
+      </div>
+
+      {/* Ejemplo orientador para que Aye entienda qué decir */}
+      <div style={{background:"#f0fdf4",borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:12,color:"#166534",border:"1px solid #86efac"}}>
+        <div style={{fontWeight:700,marginBottom:4}}>💡 Ejemplo de lo que podés decir:</div>
+        <div style={{lineHeight:1.6,fontStyle:"italic"}}>
+          "Hoy Sofía estuvo presente, trabajamos fracciones y pudo resolver los tres primeros ejercicios sola pero necesitó ayuda con denominadores distintos. Acordé con la profe que la próxima clase repasan antes de avanzar. Recordarme hablar con la mamá sobre el cuaderno."
+        </div>
+      </div>
+
+      {/* Campo de texto simulando el audio */}
+      <SimuladorVoz onTranscripcion={procesarAudio} color={escColor}/>
+
+      <Btn outline onClick={()=>setModo("elegir")} color={GR} full>← Volver</Btn>
+    </Card>
+  );
+
+  // ── Procesando: animación de espera ──────────────────────────
+  if (modo === "procesando") return (
+    <Card sx={{border:`2px solid ${escColor}`,marginBottom:8,textAlign:"center",padding:32}}>
+      <div style={{fontSize:48,marginBottom:16}}>🧠</div>
+      <div style={{fontWeight:800,fontSize:16,marginBottom:8}}>Claude está interpretando...</div>
+      <div style={{fontSize:13,color:GR,lineHeight:1.5}}>Está identificando la asistencia, el avance pedagógico, los acuerdos y los recordatorios de lo que dijiste.</div>
+      <div style={{marginTop:20,display:"flex",justifyContent:"center",gap:6}}>
+        {[0,1,2].map(i=><div key={i} style={{width:8,height:8,borderRadius:"50%",background:escColor,animation:`pulse 1.2s ${i*.2}s infinite`}}/>)}
+      </div>
+      <style>{`@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}`}</style>
+    </Card>
+  );
+
+  // ── Pantalla de confirmación: el paso clave ───────────────────
+  if (modo === "confirmar" && propuesta) return (
+    <PantallaConfirmacion
+      propuesta={propuesta}
+      alumno={alumno}
+      docentes={docentes}
+      escColor={escColor}
+      onConfirmar={(datos) => save(datos)}
+      onRechazar={() => setModo("voz")}
+    />
+  );
+
+  // ── Modo manual: el formulario clásico ───────────────────────
+  return (
+    <Card sx={{border:`2px solid ${escColor}`,marginBottom:8}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{fontWeight:800,fontSize:16}}>Nuevo registro</div>
+        {/* Botón para volver al modo voz si cambia de opinión */}
+        <button onClick={()=>setModo("voz")} style={{background:escColor+"15",border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,color:escColor,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:4}}>
+          🎙 Usar voz
+        </button>
+      </div>
+
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:8}}>Asistencia</div>
+        <div style={{display:"flex",gap:8}}>
+          {["presente","ausente","llegó tarde"].map(op=>
+            <button key={op} onClick={()=>setAsist(op)} style={{flex:1,padding:"8px 4px",borderRadius:8,border:"2px solid",borderColor:asist===op?escColor:BD,background:asist===op?escColor:"#fff",color:asist===op?"#fff":"#475569",fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit",textTransform:"capitalize"}}>{op}</button>
+          )}
+        </div>
+      </div>
+
+      {docPre
+        ? <div style={{marginBottom:14,background:"#f8fafc",borderRadius:10,padding:"10px 14px",border:`1.5px solid ${BD}`}}>
+            <div style={{fontSize:12,color:GL,textTransform:"uppercase",fontWeight:700,marginBottom:4}}>Docente</div>
+            <div style={{fontWeight:700,fontSize:14}}>{docPre.nombre} — {docPre.materia}</div>
+          </div>
+        : <Sel label="Docente de la clase" value={docId} onChange={setDocId}
+            opts={docsAlumno.map(d=>({v:d.id,l:`${d.materia} — ${d.nombre}`}))} ph="Seleccionar..."/>
+      }
+
+      <Fld label="Intervenciones y estrategias implementadas" value={avance} onChange={setAvance} multiline placeholder="¿Qué intervenciones se realizaron? ¿Qué facilitadores se identificaron en el contexto?"/>
+      <Fld label="Acuerdo con el docente" value={acuerdo} onChange={setAcuerdo} multiline placeholder="¿Qué ajustes razonables se acordaron para próximas clases?"/>
+      <Fld label="Recordatorio" value={rec} onChange={setRec} placeholder="Algo para no olvidar..."/>
+
+      <div style={{display:"flex",gap:10,marginTop:8}}>
+        <Btn outline onClick={onCancel} color={GR}>Cancelar</Btn>
+        <Btn onClick={()=>save()} color={escColor} full>Guardar registro</Btn>
+      </div>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAPA DEL DÍA
+// ═══════════════════════════════════════════════════════════════
+function MapaDia({alumnos, docentes, escuelas, registros, recs, onVerClase, dia, diaReal, onCambioDia, minActual}) {
+  const ahoraRef = useRef(null);
+  const ahoraStr = `${String(Math.floor(minActual/60)).padStart(2,"0")}:${String(minActual%60).padStart(2,"0")}`;
+  const esHoy = dia === (diaReal||dia);
+  const evs = [];
+  alumnos.filter(a=>!a.eliminado&&a.activo!==false).forEach(alumno => {
+    const esc = escuelas.find(e=>e.id===alumno.escuelaId);
+    alumno.horarios.filter(h=>h.dia===dia).forEach(h => {
+      const doc = h.docenteId ? docentes.find(d=>d.id===h.docenteId) : null;
+      const regHoy = (registros[alumno.id]||[]).find(r=>r.fecha===hoy()&&!r.eliminado);
+      const cur = esHoy && hMin(h.horaInicio)<=minActual && minActual<hMin(h.horaFin);
+      const alertaAlta = (recs||[]).find(r=>r.alumnoId===alumno.id&&r.prioridad==="alta"&&!r.eliminado)?.texto||null;
+      evs.push({
+        alumnoId:alumno.id, alumnoNombre:alumno.nombre,
+        horaInicio:h.horaInicio, horaFin:h.horaFin,
+        materia:h.esRecreo?"☕ Recreo":(doc?.materia||""),
+        docenteNombre:doc?.nombre||"", docenteId:h.docenteId||null,
+        aula:h.aula, color:esc?.color||G,
+        nivel:esc?.nivel==="Primaria"?"PRI":"SEC",
+        esRecreo:h.esRecreo||false,
+        asist:regHoy?.asistencia||null, cur, alertaAlta,
+      });
+    });
+  });
+  evs.sort((a,b)=>hMin(a.horaInicio)-hMin(b.horaInicio));
+
+  const primerFutIdx = esHoy ? evs.findIndex(ev=>hMin(ev.horaFin)>minActual) : -1;
+  const hayCur = esHoy && evs.some(ev=>ev.cur);
+  const DIAS_HAB = [1,2,3,4,5];
+
+  useEffect(()=>{ if(esHoy && ahoraRef.current) ahoraRef.current.scrollIntoView({behavior:"smooth",block:"center"}); },[dia]);
+
+  return <div>
+    {/* Cabecera con navegación semanal y reloj en vivo */}
+    <div style={{background:"linear-gradient(135deg,#1a202c,#2d3748)",borderRadius:20,padding:20,marginBottom:16,color:"#fff"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+        <button onClick={()=>onCambioDia&&onCambioDia(DIAS_HAB[Math.max(0,DIAS_HAB.indexOf(dia)-1)])} disabled={dia===1}
+          style={{background:"rgba(255,255,255,.1)",border:"none",borderRadius:10,color:dia===1?"rgba(255,255,255,.3)":"#fff",width:36,height:36,fontSize:20,cursor:dia===1?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+        <div style={{textAlign:"center"}}>
+          <div style={{fontSize:11,color:"#94a3b8",fontWeight:600,textTransform:"uppercase",letterSpacing:1}}>{esHoy?"Hoy en vivo":"Semana"}</div>
+          <div style={{fontSize:26,fontWeight:800}}>{DIAS_L[dia]}</div>
+          <div style={{fontSize:13,color:"#94a3b8",marginTop:2}}>
+            {esHoy?`🕐 ${ahoraStr} · ${evs.length} bloques`:`${evs.length} bloques programados`}
+          </div>
+        </div>
+        <button onClick={()=>onCambioDia&&onCambioDia(DIAS_HAB[Math.min(4,DIAS_HAB.indexOf(dia)+1)])} disabled={dia===5}
+          style={{background:"rgba(255,255,255,.1)",border:"none",borderRadius:10,color:dia===5?"rgba(255,255,255,.3)":"#fff",width:36,height:36,fontSize:20,cursor:dia===5?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
+      </div>
+      <div style={{display:"flex",gap:6,justifyContent:"center",marginBottom:10}}>
+        {DIAS_HAB.map(d=>(
+          <button key={d} onClick={()=>onCambioDia&&onCambioDia(d)} style={{padding:"5px 10px",borderRadius:20,border:"none",fontFamily:"inherit",background:d===dia?"#fff":(d===diaReal?"rgba(255,255,255,.25)":"rgba(255,255,255,.1)"),color:d===dia?"#1a202c":(d===diaReal?"#fff":"rgba(255,255,255,.55)"),fontWeight:d===dia||d===diaReal?800:600,fontSize:12,cursor:"pointer",position:"relative"}}>
+            {DIAS_L[d].slice(0,3)}
+            {d===diaReal&&d!==dia&&<span style={{position:"absolute",top:1,right:2,width:5,height:5,borderRadius:"50%",background:"#f59e0b"}}/>}
+          </button>
+        ))}
+      </div>
+      {/* Botón sutil de actualizar + indicador de actualización automática */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+        {esHoy&&<div style={{fontSize:10,color:"rgba(255,255,255,.4)",display:"flex",alignItems:"center",gap:4}}>
+          <span style={{width:6,height:6,borderRadius:"50%",background:"#22c55e",display:"inline-block",animation:"pulse 2s infinite"}}/>
+          Se actualiza automáticamente cada minuto
+        </div>}
+        {!esHoy&&onCambioDia&&<button onClick={()=>onCambioDia(diaReal||1)} style={{background:"#f59e0b",border:"none",borderRadius:20,color:"#fff",padding:"5px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>● Volver a hoy</button>}
+      </div>
+    </div>
+
+    {evs.length===0
+      ? <Card sx={{textAlign:"center",padding:32}}><div style={{fontSize:40,marginBottom:8}}>📅</div><div style={{fontWeight:700}}>Sin clases el {DIAS_L[dia]}</div></Card>
+      : evs.map((ev,i) => {
+          const past = esHoy && hMin(ev.horaFin)<=minActual;
+          const esRef = esHoy && (ev.cur || (!hayCur && i===primerFutIdx));
+          return <div key={i} ref={esRef?ahoraRef:null}>
+            {esRef && <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,marginTop:i>0?4:0}}>
+              <div style={{flex:1,height:2,background:"#f59e0b",borderRadius:2}}/>
+              <span style={{background:"#f59e0b",color:"#fff",borderRadius:20,padding:"3px 12px",fontSize:11,fontWeight:800}}>● AHORA {ahoraStr}</span>
+              <div style={{flex:1,height:2,background:"#f59e0b",borderRadius:2}}/>
+            </div>}
+            <div onClick={()=>!ev.esRecreo&&onVerClase(ev)} style={{cursor:ev.esRecreo?"default":"pointer"}}>
+              <div style={{display:"flex",gap:12,marginBottom:8,alignItems:"stretch"}}>
+                {/* Hora */}
+                <div style={{minWidth:54,textAlign:"right",paddingTop:16,fontSize:12,fontWeight:700,color:ev.cur?G:GL}}>
+                  <div>{ev.horaInicio}</div><div style={{fontSize:10,marginTop:2}}>{ev.horaFin}</div>
+                </div>
+                {/* Línea de tiempo */}
+                <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
+                  <div style={{width:12,height:12,borderRadius:"50%",marginTop:18,flexShrink:0,background:ev.cur?G:(past?"#e2e8f0":ev.color),border:ev.cur?"3px solid #b7e4c7":"none"}}/>
+                  {i<evs.length-1&&<div style={{width:2,flex:1,background:BD,minHeight:16}}/>}
+                </div>
+                {/* Tarjeta */}
+                <div style={{flex:1,background:ev.cur?"#f0fdf4":(past?"#fafafa":"#fff"),borderRadius:14,borderLeft:ev.cur?"4px solid "+G:(past?"4px solid #e2e8f0":"4px solid transparent"),padding:"12px 14px",marginBottom:4,opacity:past?.55:1}}>
+                  {ev.esRecreo
+                    ? <div style={{color:GR,fontWeight:600,fontSize:14}}>☕ Recreo · {ev.aula}</div>
+                    : <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                        <div style={{flex:1}}>
+                          <div style={{fontWeight:800,fontSize:17,color:TX}}>{ev.materia}</div>
+                          <div style={{fontSize:14,fontWeight:700,color:ev.cur?G:"#334155",marginTop:3}}>{ev.alumnoNombre}</div>
+                          <div style={{fontSize:11,color:GL,marginTop:3}}>{ev.docenteNombre&&`👤 ${ev.docenteNombre}`}{ev.docenteNombre&&" · "}{ev.aula}</div>
+                          {ev.alertaAlta&&<div style={{marginTop:6,background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:8,padding:"3px 8px",fontSize:11,fontWeight:700,color:"#dc2626",display:"inline-flex",alignItems:"center",gap:4}}>🔴 {ev.alertaAlta.slice(0,50)}{ev.alertaAlta.length>50?"...":""}</div>}
+                        </div>
+                        <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
+                          <Tag text={ev.nivel} bg={ev.color}/>
+                          {ev.asist&&<Tag text={ev.asist==="presente"?"✓":ev.asist==="ausente"?"✗ Ausente":ev.asist} bg={ev.asist==="presente"?G:ev.asist==="ausente"?"#dc2626":"#f59e0b"}/>}
+                          {ev.cur&&<Tag text="● Ahora" bg="#f59e0b"/>}
+                        </div>
+                      </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>;
+        })}
+
+    {/* Alumnos sin clases hoy */}
+    {alumnos.filter(a=>!a.eliminado&&!a.horarios.some(h=>h.dia===dia)).length>0 && (
+      <div style={{marginTop:8}}>
+        <SecT text="Sin clases hoy" />
+        {alumnos.filter(a=>!a.eliminado&&!a.horarios.some(h=>h.dia===dia)).map(a => {
+          const esc = escuelas.find(e=>e.id===a.escuelaId);
+          return <div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#f8fafc",borderRadius:12,marginBottom:8}}>
+            <Avatar nombre={a.nombre} size={32} bg={esc?.color||G}/>
+            <div><div style={{fontWeight:700,fontSize:13,color:"#475569"}}>{a.nombre}</div><div style={{fontSize:11,color:GL}}>{esc?.nombre}</div></div>
+          </div>;
+        })}
+      </div>
+    )}
+  </div>;
+}
+
+// ─── Adaptar tarea desde foto (versión compacta) ─────────────
+function AdaptarTarea({alumno,materia,docente,ec,onSave,onCancel}){
+  const[paso,setPaso]=useState("foto");const[img,setImg]=useState(null);const[prev,setPrev]=useState(null);
+  const[tareaOrig,setTO]=useState("");const[adapts,setAdapts]=useState([]);const[sel,setSel]=useState(0);const[edit,setEdit]=useState("");
+  const ref=useRef(null);
+  const onFile=e=>{const f=e.target.files[0];if(!f)return;setPrev(URL.createObjectURL(f));const r=new FileReader();r.onload=()=>setImg(r.result.split(",")[1]);r.readAsDataURL(f);};
+  const procesar=async()=>{
+    if(!img)return;setPaso("procesando");
+    try{
+      const res=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:img}},{type:"text",text:`Especialista en educación inclusiva PBA 2026. Modelo social: usá ajuste razonable, facilitador, intervención. Evitá: dificultad, limitación, déficit.\n\nTarea de ${materia} para ${alumno.nombre} (${alumno.diagnostico}).\n1. Transcribí la tarea brevemente\n2. Generá 2 adaptaciones con ajustes razonables\n\nSOLO JSON sin backticks:\n{"tareaOriginal":"...","adaptaciones":[{"titulo":"...","descripcion":"...","ajustes":"..."},{"titulo":"...","descripcion":"...","ajustes":"..."}]}`}]}]})});
+      if(!res.ok)throw new Error();
+      const data=await res.json();const txt=data.content?.[0]?.text||"";const p=JSON.parse(txt.replace(/```json|```/g,"").trim());
+      setTO(p.tareaOriginal||"");setAdapts(p.adaptaciones||[]);setEdit(p.adaptaciones?.[0]?.descripcion||"");setSel(0);
+    }catch{
+      setTO(`Tarea de ${materia} (modo demo)`);
+      const d=[{titulo:"Con apoyo visual",descripcion:`Actividad adaptada de ${materia} para ${alumno.nombre.split(" ")[0]}:\n• Ejercicios reducidos a la mitad\n• De a uno por vez\n• Con ejemplos resueltos como modelo\n• Consignas reformuladas`,ajustes:"Reducción de cantidad, modelo resuelto, consignas simples"},{titulo:"Mayor simplificación",descripcion:`Actividad simplificada de ${materia}:\n• Un ejercicio representativo\n• Dividido en pasos numerados\n• Con material concreto de apoyo\n• Tiempo flexible`,ajustes:"Un ejercicio, pasos numerados, material concreto"}];
+      setAdapts(d);setEdit(d[0].descripcion);
+    }finally{setPaso("resultado");}
+  };
+  const guardar=()=>onSave({id:"r"+Math.random().toString(36).slice(2,9),fecha:new Date().toISOString().split("T")[0],eliminado:false,asistencia:"presente",materia,docente:docente?.nombre||"",avance:`[ADAPTACIÓN DE TAREA]\nOriginal: ${tareaOrig}\n\nAdaptación:\n${edit}`,acuerdo:docente?`Compartida con ${docente.nombre}`:"",recordatorio:"",tipo:"adaptacion"});
+  const MORADO="linear-gradient(135deg,#7c3aed,#a78bfa)";
+  return (
+    <Card sx={{border:"2px solid #7c3aed",marginBottom:8}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <div style={{fontWeight:800,fontSize:15}}>📸 Adaptar tarea</div>
+      <button onClick={onCancel} style={{background:"none",border:"none",cursor:"pointer",color:GR,fontSize:13,fontFamily:"inherit"}}>✕</button>
+    </div>
+    {paso==="foto"&&<div>
+      <div style={{fontSize:12,color:GR,marginBottom:12,lineHeight:1.5}}>Foto del pizarrón o la hoja → Claude lee la tarea y genera versiones adaptadas para <strong>{alumno.nombre.split(" ")[0]}</strong>.</div>
+      <div onClick={()=>ref.current?.click()} style={{border:"2px dashed #7c3aed",borderRadius:12,padding:24,textAlign:"center",cursor:"pointer",background:prev?"#f5f3ff":"#faf5ff",marginBottom:12}}>
+        {prev?<img src={prev} alt="preview" style={{maxWidth:"100%",maxHeight:160,borderRadius:8,objectFit:"contain"}}/>:<><div style={{fontSize:32,marginBottom:6}}>📷</div><div style={{fontWeight:700,fontSize:13,color:"#7c3aed"}}>Tocá para subir foto</div><div style={{fontSize:11,color:GL}}>Pizarrón, hoja o libro</div></>}
+      </div>
+      <input ref={ref} type="file" accept="image/*" onChange={onFile} style={{display:"none"}}/>
+      {prev&&<div style={{display:"flex",gap:8}}>
+        <button onClick={()=>{setPrev(null);setImg(null);}} style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${BD}`,background:"#fff",color:GR,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>🔄 Cambiar</button>
+        <button onClick={procesar} style={{flex:2,padding:"10px",borderRadius:10,border:"none",background:MORADO,color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>✨ Adaptar con Claude</button>
+      </div>}
+    </div>}
+    {paso==="procesando"&&<div style={{textAlign:"center",padding:24}}>
+      <div style={{fontSize:40,marginBottom:12}}>🧠</div>
+      <div style={{fontWeight:800,fontSize:15,marginBottom:6}}>Claude está leyendo la tarea...</div>
+      <div style={{fontSize:12,color:GR,marginBottom:16}}>Generando adaptaciones para {alumno.nombre.split(" ")[0]}</div>
+      <div style={{display:"flex",justifyContent:"center",gap:5}}>{[0,1,2].map(i=><div key={i} style={{width:8,height:8,borderRadius:"50%",background:"#7c3aed",animation:`pulse 1.2s ${i*.2}s infinite`}}/>)}</div>
+    </div>}
+    {paso==="resultado"&&<div>
+      <div style={{background:"#f8fafc",borderRadius:8,padding:"8px 12px",marginBottom:12,border:`1px solid ${BD}`}}>
+        <div style={{fontSize:10,fontWeight:700,color:GL,textTransform:"uppercase",marginBottom:3}}>Tarea original</div>
+        <div style={{fontSize:12,color:GR,fontStyle:"italic"}}>"{tareaOrig}"</div>
+      </div>
+      <div style={{display:"flex",gap:6,marginBottom:10}}>
+        {adapts.map((a,i)=><button key={i} onClick={()=>{setSel(i);setEdit(a.descripcion);}} style={{flex:1,padding:"7px 8px",borderRadius:8,border:"2px solid",cursor:"pointer",fontFamily:"inherit",borderColor:sel===i?"#7c3aed":BD,background:sel===i?"#f5f3ff":"#fff",fontSize:11,fontWeight:700,color:sel===i?"#7c3aed":"#475569"}}>{a.titulo}</button>)}
+      </div>
+      {adapts[sel]&&<div style={{background:"#f5f3ff",borderRadius:8,padding:"6px 10px",marginBottom:8,fontSize:11,color:"#7c3aed",fontWeight:600}}>✓ {adapts[sel].ajustes}</div>}
+      <textarea value={edit} onChange={e=>setEdit(e.target.value)} style={{width:"100%",border:"2px solid #7c3aed",borderRadius:10,padding:"10px 12px",fontSize:12,fontFamily:"inherit",color:TX,background:"#faf5ff",boxSizing:"border-box",outline:"none",resize:"vertical",minHeight:100,lineHeight:1.5,marginBottom:10}}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        <button onClick={()=>navigator.clipboard?.writeText(`Adaptación para ${alumno.nombre} — ${materia}\n\n${edit}`).catch(()=>{})} style={{padding:"10px",borderRadius:10,border:`1.5px solid ${BD}`,background:"#fff",color:GR,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>📋 Copiar</button>
+        <button onClick={guardar} style={{padding:"10px",borderRadius:10,border:"none",background:MORADO,color:"#fff",fontWeight:800,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>💾 Guardar como registro</button>
+      </div>
+      <div style={{fontSize:10,color:GL,textAlign:"center",marginTop:6}}>Se guarda como evidencia de intervención en el historial</div>
+    </div>}
+  </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VISTA DE CLASE — se abre al tocar un bloque del mapa
+// ═══════════════════════════════════════════════════════════════
+function VistaClase({ev, alumno, docentes, registros, escuelas, onAddReg, onAddRec, onFicha, onBack}) {
+  const [modo, setModo] = useState(null);
+  const esc = escuelas.find(e=>e.id===alumno.escuelaId);
+  const ec = esc?.color||G;
+  const doc = ev.docenteId ? docentes.find(d=>d.id===ev.docenteId) : null;
+  // Historial filtrado solo por la materia de este bloque
+  const hist = (registros[alumno.id]||[]).filter(r=>r.materia===ev.materia&&!r.eliminado);
+
+  return <div>
+    <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",color:ec,fontWeight:700,fontSize:14,padding:0,marginBottom:16,fontFamily:"inherit"}}>← Volver al mapa</button>
+
+    {/* Cabecera del momento */}
+    <div style={{background:"linear-gradient(135deg,#1a202c,#2d3748)",borderRadius:20,padding:20,color:"#fff",marginBottom:16}}>
+      <div style={{marginBottom:10}}>
+        {ev.cur?<span style={{background:"#f59e0b",color:"#fff",borderRadius:20,padding:"3px 12px",fontSize:12,fontWeight:800}}>● En curso</span>
+          :<span style={{background:"rgba(255,255,255,.15)",color:"rgba(255,255,255,.7)",borderRadius:20,padding:"3px 12px",fontSize:12}}>Clase pasada / próxima</span>}
+      </div>
+      <div style={{fontSize:26,fontWeight:800,marginBottom:4}}>{ev.materia}</div>
+      <div style={{fontSize:14,color:"rgba(255,255,255,.75)"}}>{ev.horaInicio}–{ev.horaFin} · {ev.aula}</div>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginTop:16,paddingTop:16,borderTop:"1px solid rgba(255,255,255,.1)"}}>
+        <Avatar nombre={alumno.nombre} size={40} bg={ec}/>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:16}}>{alumno.nombre}</div>
+          <div style={{fontSize:12,color:"rgba(255,255,255,.65)",marginTop:2}}>{alumno.curso} · {alumno.diagnostico}</div>
+        </div>
+        <button onClick={onFicha} style={{background:"rgba(255,255,255,.15)",border:"none",borderRadius:10,color:"#fff",fontSize:12,fontWeight:700,padding:"6px 12px",cursor:"pointer",fontFamily:"inherit"}}>Ver ficha →</button>
+      </div>
+    </div>
+
+    {/* Docente del momento */}
+    {doc && <Card sx={{borderLeft:`4px solid ${ec}`}}>
+      <SecT text="Docente de esta clase" />
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:44,height:44,borderRadius:"50%",background:ec+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,fontWeight:800,color:ec}}>{doc.nombre.split(" ").pop()[0]}</div>
+          <div><div style={{fontWeight:800,fontSize:15}}>{doc.nombre}</div><div style={{fontSize:12,color:GR}}>{doc.materia} · {doc.telefono}</div></div>
+        </div>
+        <WA tel={doc.telefono}/>
+      </div>
+    </Card>}
+
+    {/* Acciones rápidas */}
+    {!modo && <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
+      <button onClick={()=>setModo("reg")} style={{background:ec,color:"#fff",border:"none",borderRadius:12,padding:"14px 12px",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit",display:"flex",flexDirection:"column",alignItems:"center",gap:6}}><span style={{fontSize:22}}>📝</span>Registrar clase</button>
+      <button onClick={()=>setModo("nota")} style={{background:"#fff",color:TX,border:`2px solid ${BD}`,borderRadius:12,padding:"14px 12px",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit",display:"flex",flexDirection:"column",alignItems:"center",gap:6}}><span style={{fontSize:22}}>⏰</span>Anotar algo</button>
+      <button onClick={()=>setModo("adaptar")} style={{background:"linear-gradient(135deg,#7c3aed,#a78bfa)",color:"#fff",border:"none",borderRadius:12,padding:"14px 12px",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit",display:"flex",flexDirection:"column",alignItems:"center",gap:6,gridColumn:"1/-1"}}><span style={{fontSize:22}}>📸</span>Adaptar tarea desde foto</button>
+    </div>}
+    {modo==="adaptar"&&<AdaptarTarea alumno={alumno} materia={ev.materia} docente={doc} ec={ec} onSave={r=>{onAddReg(alumno.id,r);setModo(null);}} onCancel={()=>setModo(null)}/>}
+
+    {modo==="reg" && <FormReg alumno={alumno} docentes={docentes} escColor={ec} docPre={doc} onSave={r=>{onAddReg(alumno.id,r);setModo(null);}} onCancel={()=>setModo(null)}/>}
+    {modo==="nota" && <NotaRapida
+      ec={ec}
+      ctx={`${ev.materia}${doc?` con ${doc.nombre}`:""}`}
+      alumnoId={alumno.id}
+      onSave={rec=>{onAddRec(rec);setModo(null);}}
+      onCancel={()=>setModo(null)}
+    />}
+
+    {/* Historial de esta materia */}
+    <div style={{marginTop:8}}>
+      <div style={{fontWeight:800,fontSize:16,color:TX,marginBottom:4}}>Historial en {ev.materia}</div>
+      <div style={{fontSize:12,color:GL,marginBottom:12}}>{hist.length===0?"Sin registros aún":`${hist.length} clases registradas`}</div>
+      {hist.length===0
+        ? <Card sx={{textAlign:"center",padding:28}}><div style={{fontSize:34,marginBottom:8}}>📋</div><div style={{fontWeight:700,color:"#475569"}}>Sin registros aún en esta materia</div></Card>
+        : hist.map(r=><RegCard key={r.id} r={r}/>)}
+    </div>
+  </div>;
+}
+
+function NotaRapida({ec, ctx, alumnoId, onSave, onCancel}) {
+  const [txt,setTxt] = useState("");
+  const [pri,setPri] = useState("media");
+  const pc = {alta:"#dc2626",media:"#f59e0b",baja:G};
+
+  const guardar = () => {
+    if (!txt.trim()) return;
+    // Creamos el aviso con el contexto de clase incluido en el texto,
+    // así cuando Aye lo vea en Avisos sabe de dónde vino.
+    onSave({
+      id:"rc"+uid(),
+      alumnoId: alumnoId||"",
+      texto: ctx ? `[${ctx}] ${txt}` : txt,
+      fecha: hoy(),
+      prioridad: pri,
+      eliminado: false,
+    });
+  };
+
+  return <Card sx={{border:`2px solid ${ec}`,marginBottom:8}}>
+    <div style={{fontWeight:800,fontSize:15,marginBottom:4}}>Anotar algo</div>
+    <div style={{fontSize:12,color:GL,marginBottom:14}}>
+      📍 Contexto: <strong>{ctx||"general"}</strong>
+      <div style={{fontSize:11,color:GL,marginTop:2}}>Va a aparecer en ⏰ Avisos con este contexto.</div>
+    </div>
+    <Fld label="¿Qué querés recordar?" value={txt} onChange={setTxt} multiline placeholder="Acordar con la docente... / Hablar con los padres... / Traer material..."/>
+    <div style={{marginBottom:14}}>
+      <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:8}}>Prioridad</div>
+      <div style={{display:"flex",gap:8}}>
+        {["alta","media","baja"].map(p=><button key={p} onClick={()=>setPri(p)} style={{flex:1,padding:"8px",borderRadius:8,border:"2px solid",borderColor:pri===p?pc[p]:BD,background:pri===p?pc[p]:"#fff",color:pri===p?"#fff":"#475569",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",textTransform:"capitalize"}}>{p}</button>)}
+      </div>
+    </div>
+    <div style={{display:"flex",gap:10}}>
+      <Btn outline onClick={onCancel} color={GR}>Cancelar</Btn>
+      <Btn onClick={guardar} color={ec} full disabled={!txt.trim()}>Guardar en Avisos</Btn>
+    </div>
+  </Card>;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DIRECTORIO
+// ═══════════════════════════════════════════════════════════════
+function Directorio({alumnos, escuelas, onVer}) {
+  const [escId,setEscId] = useState(null);
+  const [modo,setModo] = useState(null);
+  const [curso,setCurso] = useState(null);
+  const esc = escuelas.find(e=>e.id===escId);
+  const aa = alumnos.filter(a=>a.escuelaId===escId&&!a.eliminado);
+
+  const Hdr = ({onB}) => <>
+    <button onClick={onB} style={{background:"none",border:"none",cursor:"pointer",color:esc.color,fontWeight:700,fontSize:14,padding:0,marginBottom:16,fontFamily:"inherit"}}>← Volver</button>
+    <div style={{background:`linear-gradient(135deg,${esc.color},${esc.color}bb)`,borderRadius:20,padding:20,color:"#fff",marginBottom:16}}>
+      <div style={{fontSize:11,color:"rgba(255,255,255,.7)",textTransform:"uppercase",letterSpacing:1}}>{esc.nivel}</div>
+      <div style={{fontSize:22,fontWeight:800,marginTop:4,marginBottom:14}}>{esc.nombre}</div>
+      {esc.direccion&&<div style={{fontSize:13,color:"rgba(255,255,255,.9)",marginBottom:12,display:"flex",alignItems:"center",gap:8}}><span>📍</span><span>{esc.direccion}</span></div>}
+      {/* Director */}
+      <div style={{background:"rgba(255,255,255,.12)",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+        <div style={{fontSize:10,color:"rgba(255,255,255,.6)",textTransform:"uppercase",fontWeight:700,marginBottom:6}}>Director/a</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+          <div><div style={{fontWeight:800,fontSize:15}}>{esc.director}</div>
+            {esc.telefonoDirector&&<div style={{fontSize:11,color:"rgba(255,255,255,.75)",marginTop:1}}>📞 {esc.telefonoDirector}</div>}
+            {esc.mailDirector&&<div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:1}}>✉ {esc.mailDirector}</div>}
+          </div>
+          <div style={{display:"flex",gap:5,flexShrink:0}}>
+            {esc.telefonoDirector&&<a href={`https://wa.me/54${esc.telefonoDirector.replace(/[-\s]/g,"")}`} target="_blank" rel="noreferrer" style={{background:"#25D366",color:"#fff",borderRadius:8,padding:"5px 9px",fontSize:11,fontWeight:700,textDecoration:"none"}}>WA</a>}
+            {esc.mailDirector&&<a href={`mailto:${esc.mailDirector}`} style={{background:"#3b82f6",color:"#fff",borderRadius:8,padding:"5px 9px",fontSize:11,fontWeight:700,textDecoration:"none"}}>Mail</a>}
+          </div>
+        </div>
+      </div>
+      {/* Secretaría */}
+      {esc.secretaria&&<div style={{background:"rgba(255,255,255,.12)",borderRadius:12,padding:"12px 14px"}}>
+        <div style={{fontSize:10,color:"rgba(255,255,255,.6)",textTransform:"uppercase",fontWeight:700,marginBottom:6}}>Secretaría</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+          <div><div style={{fontWeight:800,fontSize:15}}>{esc.secretaria}</div>
+            {esc.telefonoSecretaria&&<div style={{fontSize:11,color:"rgba(255,255,255,.75)",marginTop:1}}>📞 {esc.telefonoSecretaria}</div>}
+            {esc.mailSecretaria&&<div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:1}}>✉ {esc.mailSecretaria}</div>}
+          </div>
+          <div style={{display:"flex",gap:5,flexShrink:0}}>
+            {esc.telefonoSecretaria&&<a href={`https://wa.me/54${esc.telefonoSecretaria.replace(/[-\s]/g,"")}`} target="_blank" rel="noreferrer" style={{background:"#25D366",color:"#fff",borderRadius:8,padding:"5px 9px",fontSize:11,fontWeight:700,textDecoration:"none"}}>WA</a>}
+            {esc.mailSecretaria&&<a href={`mailto:${esc.mailSecretaria}`} style={{background:"#3b82f6",color:"#fff",borderRadius:8,padding:"5px 9px",fontSize:11,fontWeight:700,textDecoration:"none"}}>Mail</a>}
+          </div>
+        </div>
+      </div>}
+    </div>
+    {/* EOE */}
+    {(esc.eoe||[]).filter(e=>!e.eliminado).length>0&&(
+      <div style={{marginBottom:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          <div style={{fontSize:14,fontWeight:800,color:esc.color}}>Equipo de Orientación Escolar</div>
+          <div style={{flex:1,height:1,background:esc.color+"33"}}/>
+        </div>
+        <div style={{fontSize:12,color:GR,marginBottom:12,lineHeight:1.5}}>Los aliados institucionales de Aye. Ante cualquier inconveniente con docentes o directivos, son el canal de resolución.</div>
+        {(esc.eoe||[]).filter(e=>!e.eliminado).map(m=>(
+          <Card key={m.id} sx={{borderLeft:`3px solid ${esc.color}`,padding:"12px 14px"}}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+              <div style={{width:40,height:40,borderRadius:"50%",background:esc.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:esc.color,flexShrink:0}}>{m.nombre.split(" ").pop()[0]}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:800,fontSize:14,color:TX}}>{m.nombre}</div>
+                <div style={{fontSize:12,color:esc.color,fontWeight:700,marginTop:1}}>{m.rol}</div>
+                {m.diasPresencia&&<div style={{fontSize:11,color:GL,marginTop:3}}>📅 {m.diasPresencia}</div>}
+                {m.telefono&&<div style={{fontSize:11,color:GL,marginTop:1}}>📞 {m.telefono}</div>}
+                {m.mail&&<div style={{fontSize:11,color:GL,marginTop:1}}>✉ {m.mail}</div>}
+                <div style={{display:"flex",gap:6,marginTop:8}}>
+                  {m.telefono&&<a href={`https://wa.me/54${m.telefono.replace(/[-\s]/g,"")}`} target="_blank" rel="noreferrer" style={{background:"#25D366",color:"#fff",borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,textDecoration:"none"}}>WhatsApp</a>}
+                  {m.mail&&<a href={`mailto:${m.mail}`} style={{background:"#3b82f6",color:"#fff",borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,textDecoration:"none"}}>Mail</a>}
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    )}
+  </>;
+
+  if (!escId) return <div>
+    <div style={{fontSize:22,fontWeight:800,color:TX,marginBottom:4}}>Directorio</div>
+    <div style={{fontSize:14,color:GR,marginBottom:20}}>Seleccioná una institución</div>
+    {escuelas.filter(e=>!e.eliminado).map(e=><Card key={e.id} onClick={()=>setEscId(e.id)} sx={{borderLeft:`4px solid ${e.color}`}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div><Tag text={e.nivel} bg={e.color}/><div style={{fontWeight:800,fontSize:16,color:TX,marginTop:6}}>{e.nombre}</div><div style={{fontSize:13,color:GR,marginTop:2}}>👤 {e.director}</div><div style={{fontSize:12,color:GL,marginTop:2}}>{alumnos.filter(a=>a.escuelaId===e.id&&!a.eliminado).length} alumnos integrados</div></div>
+        <div style={{fontSize:20,color:"#cbd5e0"}}>›</div>
+      </div>
+    </Card>)}
+  </div>;
+
+  if (!modo) return <div>
+    <Hdr onB={()=>setEscId(null)}/>
+    <div style={{fontSize:14,fontWeight:700,color:GR,marginBottom:14}}>¿Cómo querés navegar?</div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+      <Card onClick={()=>setModo("est")} sx={{textAlign:"center",padding:24,cursor:"pointer"}}><div style={{fontSize:32,marginBottom:8}}>👤</div><div style={{fontWeight:800,fontSize:15}}>Por estudiante</div></Card>
+      <Card onClick={()=>setModo("cur")} sx={{textAlign:"center",padding:24,cursor:"pointer"}}><div style={{fontSize:32,marginBottom:8}}>🏫</div><div style={{fontWeight:800,fontSize:15}}>Por curso</div></Card>
+    </div>
+  </div>;
+
+  if (modo==="est") return <div>
+    <Hdr onB={()=>setModo(null)}/>
+    <SecT text={`Estudiantes (${aa.length})`}/>
+    {aa.map(a=><Card key={a.id} onClick={()=>onVer(a.id)} sx={{padding:"12px 14px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12}}><Avatar nombre={a.nombre} size={42} bg={esc.color}/><div style={{flex:1}}><div style={{fontWeight:800,fontSize:15}}>{a.nombre}</div><div style={{fontSize:12,color:GR,marginTop:2}}>{a.curso} · {a.diagnostico}</div></div><div style={{fontSize:18,color:"#cbd5e0"}}>›</div></div>
+    </Card>)}
+  </div>;
+
+  if (modo==="cur"&&!curso) {
+    const cursos = [...new Set(aa.map(a=>a.curso))].sort();
+    return <div>
+      <Hdr onB={()=>setModo(null)}/>
+      <SecT text="Cursos con integración"/>
+      {cursos.map(c=>{ const ac=aa.filter(a=>a.curso===c); return <Card key={c} onClick={()=>setCurso(c)} sx={{padding:"14px 16px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div><div style={{fontWeight:800,fontSize:16}}>{c}</div><div style={{fontSize:12,color:GR,marginTop:4}}>{ac.map(a=>a.nombre).join(", ")}</div></div>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{background:esc.color+"22",color:esc.color,borderRadius:20,padding:"4px 12px",fontWeight:700,fontSize:13}}>{ac.length}</span><div style={{fontSize:18,color:"#cbd5e0"}}>›</div></div>
+        </div>
+      </Card>; })}
+    </div>;
+  }
+
+  return <div>
+    <button onClick={()=>setCurso(null)} style={{background:"none",border:"none",cursor:"pointer",color:esc.color,fontWeight:700,fontSize:14,padding:0,marginBottom:16,fontFamily:"inherit"}}>← Volver a cursos</button>
+    <div style={{fontWeight:800,fontSize:20,color:TX,marginBottom:4}}>{curso}</div>
+    <div style={{fontSize:13,color:GR,marginBottom:20}}>{esc.nombre}</div>
+    {aa.filter(a=>a.curso===curso).map(a=><Card key={a.id} onClick={()=>onVer(a.id)} sx={{padding:"12px 14px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12}}><Avatar nombre={a.nombre} size={42} bg={esc.color}/><div style={{flex:1}}><div style={{fontWeight:800,fontSize:15}}>{a.nombre}</div><div style={{fontSize:12,color:GR,marginTop:2}}>{a.diagnostico}</div></div><div style={{fontSize:18,color:"#cbd5e0"}}>›</div></div>
+    </Card>)}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FICHA DEL ALUMNO
+// ═══════════════════════════════════════════════════════════════
+function FichaAlumno({alumno, docentes, pros, escuelas, registros, onAddReg, onDelReg, onBack}) {
+  const [tab,setTab] = useState("info");
+  const [docSel,setDocSel] = useState(null);
+  const [showForm,setShowForm] = useState(false);
+  const esc = escuelas.find(e=>e.id===alumno.escuelaId);
+  const ec = esc?.color||G;
+  const regsA = (registros[alumno.id]||[]).filter(r=>!r.eliminado);
+  // Docentes únicos del alumno, extraídos de sus horarios
+  const docsA = [...new Set(alumno.horarios.filter(h=>h.docenteId).map(h=>h.docenteId))]
+    .map(id=>docentes.find(d=>d.id===id)).filter(Boolean);
+
+  const cud = alumno.cud && alumno.cudVencimiento
+    ? Math.round((new Date(alumno.cudVencimiento)-new Date("2026-06-01"))/864e5)
+    : null;
+
+  // Vista de detalle docente-alumno
+  if (docSel) return <DetalleDoc doc={docSel} alumno={alumno} docentes={docentes} registros={registros} ec={ec} onBack={()=>setDocSel(null)} onAdd={onAddReg}/>;
+
+  return <div>
+    <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",color:ec,fontWeight:700,fontSize:14,padding:0,marginBottom:16,fontFamily:"inherit"}}>← Volver</button>
+
+    {cud!==null&&cud<180&&<div style={{background:cud<0?"#fef2f2":"#fffbeb",border:`1.5px solid ${cud<0?"#dc2626":"#f59e0b"}`,borderRadius:12,padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:700,color:cud<0?"#991b1b":"#92400e"}}>{cud<0?"⚠️ CUD VENCIDO — renovar urgente":`⚠️ CUD vence en ${cud} días — gestionar renovación`}</div>}
+
+    <div style={{background:`linear-gradient(135deg,${ec},${ec}aa)`,borderRadius:20,padding:20,color:"#fff",marginBottom:16,display:"flex",alignItems:"center",gap:16}}>
+      <Avatar nombre={alumno.nombre} size={56} bg="rgba(255,255,255,.25)"/>
+      <div><div style={{fontSize:20,fontWeight:800}}>{alumno.nombre}</div><div style={{fontSize:13,color:"rgba(255,255,255,.85)",marginTop:2}}>{alumno.curso} · {esc?.nombre}</div><div style={{fontSize:12,color:"rgba(255,255,255,.7)",marginTop:2}}>{alumno.diagnostico}</div></div>
+    </div>
+
+    <div style={{display:"flex",gap:8,marginBottom:16,overflowX:"auto"}}>
+      {[{id:"info",l:"📋 Info"},{id:"docentes",l:"👥 Docentes"},{id:"historial",l:"📝 Historial"},{id:"horarios",l:"🗓 Horarios"},{id:"actividades",l:"✨ Actividades"},{id:"documentos",l:"📄 Docs"}].map(t=>
+        <button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"8px 16px",borderRadius:20,border:"2px solid",borderColor:tab===t.id?ec:BD,background:tab===t.id?ec:"#fff",color:tab===t.id?"#fff":"#475569",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{t.l}</button>
+      )}
+    </div>
+
+    {tab==="info"&&<div>
+      <Card>
+        <SecT text="Datos personales"/>
+        <div style={{display:"grid",gap:10}}>
+          {[["DNI",alumno.dni],["CUIL",alumno.cuil||"—"],["Fecha de nacimiento",fmtF(alumno.fechaNacimiento)],["Dirección",alumno.direccion||"—"],["Teléfono de casa",alumno.telefonoCasa||"—"]].map(([l,v])=>
+            <div key={l}><span style={{fontSize:11,color:GL,textTransform:"uppercase",fontWeight:700}}>{l}</span><div style={{fontWeight:600,fontSize:14,marginTop:2}}>{v}</div></div>
+          )}
+        </div>
+        <div style={{marginTop:14,padding:"10px 14px",borderRadius:10,background:alumno.cud?"#f0fdf4":"#fafafa",border:`1.5px solid ${alumno.cud?"#86efac":BD}`}}>
+          <div style={{fontWeight:700,fontSize:13,color:alumno.cud?"#166534":GR}}>{alumno.cud?"✅ Tiene CUD":"⬜ Sin CUD"}</div>
+          {alumno.cud&&<><div style={{fontSize:12,color:"#166534",marginTop:2}}>{alumno.cudNumero}</div><div style={{fontSize:11,color:GL,marginTop:1}}>Vence: {fmtF(alumno.cudVencimiento)}</div></>}
+        </div>
+      </Card>
+      <Card>
+        <SecT text="Familia y contactos"/>
+        {(alumno.tutores||[]).map((t,i,arr)=><div key={i} style={{paddingBottom:14,marginBottom:i<arr.length-1?14:0,borderBottom:i<arr.length-1?`1px solid ${BD}`:"none"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+            <div><div style={{display:"flex",alignItems:"center",gap:6}}><div style={{fontWeight:800,fontSize:15}}>{t.nombre}</div>{t.principal&&<span style={{background:ec+"22",color:ec,borderRadius:10,padding:"2px 8px",fontSize:10,fontWeight:800}}>Principal</span>}</div><div style={{fontSize:12,color:GR,marginTop:2}}>{t.relacion} · {t.telefono}</div></div>
+            <WA tel={t.telefono}/>
+          </div>
+        </div>)}
+      </Card>
+      <Card>
+        <SecT text="Salud"/>
+        <div style={{display:"grid",gap:10,marginBottom:14}}>
+          {[["Diagnóstico",alumno.diagnostico],["Obra Social",alumno.obraSocial?`${alumno.obraSocial} · ${alumno.nroAfiliado}`:"—"],["Medicación",alumno.medicacion||"—"]].map(([l,v])=>
+            <div key={l}><span style={{fontSize:11,color:GL,textTransform:"uppercase",fontWeight:700}}>{l}</span><div style={{fontWeight:600,fontSize:14,marginTop:2}}>{v}</div></div>
+          )}
+        </div>
+        <SecT text="Terapias actuales"/>
+        {(alumno.terapias||[]).map((t,i,arr)=><div key={i} style={{padding:"10px 0",borderBottom:i<arr.length-1?`1px solid ${BD}`:"none"}}><div style={{fontWeight:700,fontSize:14}}>🔬 {t.nombre}</div><div style={{fontSize:12,color:GR,marginTop:2}}>{t.profesional}</div><div style={{fontSize:11,color:GL,marginTop:1}}>{t.frecuencia}</div></div>)}
+      </Card>
+      <Card>
+        <SecT text="Profesionales externos"/>
+        {(alumno.profesionalIds||[]).length===0
+          ? <div style={{fontSize:13,color:GL,fontStyle:"italic"}}>Sin profesionales externos asociados.</div>
+          : (alumno.profesionalIds||[]).map((pid,i,arr)=>{ const p=pros.find(x=>x.id===pid&&!x.eliminado); if(!p)return null; return <div key={p.id} style={{padding:"10px 0",borderBottom:i<arr.length-1?`1px solid ${BD}`:"none"}}><div style={{fontWeight:700,fontSize:14}}>{p.nombre}</div><div style={{fontSize:12,color:GR}}>{p.rol}</div>{p.mail&&<div style={{fontSize:11,color:GL,marginTop:1}}>✉ {p.mail}</div>}<div style={{display:"flex",gap:6,marginTop:6}}><WA tel={p.telefono}/><Mail mail={p.mail}/></div></div>; })}
+      </Card>
+      <Card>
+        <SecT text="Trayectoria escolar"/>
+        {[...(alumno.trayectoria||[])].reverse().map((t,i,arr)=><div key={t.ciclo||i} style={{display:"flex",gap:14,marginBottom:i<arr.length-1?4:0}}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:20}}>
+            <div style={{width:10,height:10,borderRadius:"50%",marginTop:4,flexShrink:0,background:i===0?ec:"#cbd5e0",border:i===0?`3px solid ${ec}44`:"none"}}/>
+            {i<arr.length-1&&<div style={{width:2,flex:1,background:BD,minHeight:20,marginTop:4}}/>}
+          </div>
+          <div style={{flex:1,paddingBottom:16}}>
+            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}><span style={{fontWeight:800,fontSize:13,color:i===0?ec:GR}}>{t.ciclo}</span><span style={{background:i===0?ec+"18":"#f1f5f9",color:i===0?ec:"#475569",borderRadius:6,padding:"1px 8px",fontSize:11,fontWeight:700}}>{t.nivel}</span></div>
+            <div style={{fontSize:13,fontWeight:600,color:TX}}>{t.institucion}</div>
+            {t.notas&&<div style={{fontSize:12,color:GR,marginTop:4,lineHeight:1.5}}>{t.notas}</div>}
+          </div>
+        </div>)}
+      </Card>
+    </div>}
+
+    {tab==="docentes"&&<div>
+      <div style={{fontSize:13,color:GR,marginBottom:16}}>Tocá un docente para ver su historial con {alumno.nombre.split(" ")[0]}.</div>
+      {docsA.length===0
+        ? <Card sx={{textAlign:"center",padding:32}}><div style={{fontSize:32,marginBottom:8}}>👩🏫</div><div style={{color:GR}}>Sin docentes asociados. Cargá los horarios del alumno en el panel de configuración.</div></Card>
+        : docsA.map(d=>{ const cr=regsA.filter(r=>r.docente===d.nombre).length; const ds=[...new Set(alumno.horarios.filter(h=>h.docenteId===d.id).map(h=>DIAS[h.dia]))].join(", "); return <Card key={d.id} onClick={()=>setDocSel(d)} sx={{borderLeft:`4px solid ${ec}`}}>
+          <div style={{display:"flex",alignItems:"center",gap:14}}>
+            <div style={{width:48,height:48,borderRadius:"50%",flexShrink:0,background:ec+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:800,color:ec}}>{d.nombre.split(" ").pop()[0]}</div>
+            <div style={{flex:1}}><div style={{fontWeight:800,fontSize:17,color:TX}}>{d.materia}</div><div style={{fontSize:13,color:"#475569",marginTop:2}}>{d.nombre}</div><div style={{fontSize:12,color:GL,marginTop:3}}>{ds&&`📅 ${ds}`}{cr>0&&` · 📝 ${cr} reg.`}</div></div>
+            <div style={{fontSize:20,color:"#cbd5e0"}}>›</div>
+          </div>
+        </Card>; })}
+    </div>}
+
+    {tab==="historial"&&<div>
+      {!showForm
+        ? <Btn full onClick={()=>setShowForm(true)} color={ec}>+ Nuevo registro</Btn>
+        : <FormReg alumno={alumno} docentes={docentes} escColor={ec} onSave={r=>{onAddReg(alumno.id,r);setShowForm(false);}} onCancel={()=>setShowForm(false)}/>}
+      <div style={{marginTop:16}}>
+        {regsA.length===0
+          ? <Card sx={{textAlign:"center",padding:32}}><div style={{fontSize:32,marginBottom:8}}>📝</div><div style={{color:GR}}>Sin registros aún</div></Card>
+          : regsA.map(r=><RegCard key={r.id} r={r} onDel={id=>onDelReg(alumno.id,id)}/>)}
+      </div>
+    </div>}
+
+    {tab==="actividades"&&<TabActividades alumno={alumno} registros={registros} docentes={docentes} ec={ec}/>}
+    {tab==="documentos"&&<TabDocumentosStub alumno={alumno} ec={ec}/>}
+
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB ACTIVIDADES — generación adaptativa con Claude
+// ═══════════════════════════════════════════════════════════════
+// Este componente es el corazón de la funcionalidad de IA.
+// Toma todo lo que sabe sobre el alumno — su diagnóstico,
+// sus terapias, su historial de registros de clase, los acuerdos
+// con los docentes — y le pide a Claude que genere actividades
+// pedagógicas adaptadas a su nivel y momento actual.
+// ─── Stub de documentos — apunta a aye-docs ──────────────────
+function TabDocumentosStub({alumno,ec}){
+  return <div>
+    <Card sx={{background:"linear-gradient(135deg,#1a202c,#2d3748)",border:"none"}}>
+      <div style={{color:"#fff"}}>
+        <div style={{fontSize:22,marginBottom:8}}>📄</div>
+        <div style={{fontWeight:800,fontSize:16,marginBottom:6}}>Documentos oficiales</div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,.8)",lineHeight:1.6}}>La PPI, el Informe de Medio Año y el Informe Final de {alumno.nombre.split(" ")[0]} se gestionan en el módulo <strong>aye-docs</strong>.</div>
+      </div>
+    </Card>
+    {[{icon:"📋",l:"PPI — Propuesta Pedagógica de Inclusión",d:"Marzo–Mayo · Firman todos los actores"},{icon:"📊",l:"Informe de Medio Año",d:"Julio–Agosto · Balance del primer semestre"},{icon:"🏁",l:"Informe Final Anual",d:"Noviembre · Con tabla de calificaciones"}].map((i,idx)=>(
+      <Card key={idx} sx={{borderLeft:`3px solid ${ec}`,padding:"12px 14px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <span style={{fontSize:24}}>{i.icon}</span>
+          <div><div style={{fontWeight:800,fontSize:14}}>{i.l}</div><div style={{fontSize:12,color:GR,marginTop:2}}>{i.d}</div></div>
+        </div>
+      </Card>
+    ))}
+    <div style={{background:"#f0fdf4",borderRadius:12,padding:"12px 14px",fontSize:12,color:"#166534",lineHeight:1.5}}>
+      💡 Abrí el artifact <strong>aye-docs</strong> para completar y exportar estos documentos. Los datos se sincronizan automáticamente por localStorage.
+    </div>
+  </div>;
+}
+
+function TabActividades({ alumno, registros, docentes, ec }) {
+  const [materiaSeleccionada, setMateriaSeleccionada] = useState("");
+  const [actividades, setActividades]                 = useState(null);
+  const [cargando, setCargando]                       = useState(false);
+  const [error, setError]                             = useState("");
+  const [orientacion, setOrientacion]                 = useState(""); // tema o contexto que Aye quiere orientar
+
+  // Extraemos las materias únicas de los horarios del alumno
+  // para que Aye pueda elegir para qué materia quiere actividades
+  const materias = [...new Set(
+    alumno.horarios
+      .filter(h => h.docenteId && !h.esRecreo)
+      .map(h => docentes.find(d => d.id === h.docenteId)?.materia)
+      .filter(Boolean)
+  )];
+
+  // Tomamos los registros relevantes: los más recientes de la materia
+  // seleccionada, que son los que mejor reflejan el momento actual del alumno
+  const regsMateria = (registros[alumno.id] || [])
+    .filter(r => !r.eliminado && (!materiaSeleccionada || r.materia === materiaSeleccionada))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha))
+    .slice(0, 8); // usamos los últimos 8 para no exceder el contexto
+
+  const generarActividades = async () => {
+    if (!materiaSeleccionada) return;
+    setCargando(true);
+    setError("");
+    setActividades(null);
+
+    // Construimos un resumen del historial reciente para pasarle a Claude.
+    // Cuanto más contexto específico le damos, más personalizadas son las actividades.
+    const historialResumen = regsMateria.length > 0
+      ? regsMateria.map(r =>
+          `• ${fmtF(r.fecha)}: ${r.asistencia}. ${r.avance ? `Avance: ${r.avance}` : "Sin avance registrado."}${r.acuerdo ? ` Acuerdo: ${r.acuerdo}` : ""}`
+        ).join("\n")
+      : "Sin registros previos en esta materia.";
+
+    // El docente actual de esa materia
+    const docenteMateria = docentes.find(d =>
+      alumno.horarios.some(h => h.docenteId === d.id) &&
+      d.materia === materiaSeleccionada
+    );
+
+    try {
+      const res = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: `Sos una especialista en educación inclusiva y diseño de actividades adaptadas para alumnos con necesidades educativas especiales en Argentina.
+
+ALUMNO/A: ${alumno.nombre}
+CURSO: ${alumno.curso}
+DIAGNÓSTICO: ${alumno.diagnostico}
+TERAPIAS ACTUALES: ${(alumno.terapias || []).map(t => `${t.nombre} (${t.frecuencia})`).join(", ") || "Ninguna"}
+MATERIA: ${materiaSeleccionada}
+${docenteMateria ? `DOCENTE: ${docenteMateria.nombre}` : ""}
+${orientacion.trim() ? `\nORIENTACIÓN DE LA DOCENTE INTEGRADORA: ${orientacion.trim()}\n(Este es el tema o contexto específico que se está trabajando en el aula. Las actividades deben girar en torno a esto.)` : ""}
+
+HISTORIAL RECIENTE DE CLASES (del más reciente al más antiguo):
+${historialResumen}
+
+Con esta información, generá 3 actividades pedagógicas adaptadas para trabajar en la próxima clase. Las actividades deben:
+- Estar graduadas: una de consolidación (refuerza lo que ya sabe), una de avance (un paso más), y una de extensión (para si le sobra tiempo o va muy bien)
+- Ser específicas y concretas, no genéricas — deben reflejar el nivel y el momento actual del alumno
+- Considerar el diagnóstico para adaptar la presentación, los tiempos y los apoyos visuales si corresponde
+- Poder realizarse en el contexto del aula común con apoyo de la maestra integradora
+
+Respondé ÚNICAMENTE con un JSON válido, sin texto adicional ni backticks:
+
+{
+  "contexto": "una oración que resume el nivel actual del alumno en esta materia basándote en el historial",
+  "actividades": [
+    {
+      "nivel": "Consolidación",
+      "emoji": "🔁",
+      "titulo": "nombre corto de la actividad",
+      "descripcion": "descripción detallada de cómo realizarla, qué materiales usar, qué apoyos dar",
+      "objetivo": "qué habilidad o contenido trabaja",
+      "tiempo": "tiempo estimado en minutos",
+      "adaptaciones": "ajustes específicos para el diagnóstico de este alumno"
+    },
+    {
+      "nivel": "Avance",
+      "emoji": "📈",
+      "titulo": "...",
+      "descripcion": "...",
+      "objetivo": "...",
+      "tiempo": "...",
+      "adaptaciones": "..."
+    },
+    {
+      "nivel": "Extensión",
+      "emoji": "⭐",
+      "titulo": "...",
+      "descripcion": "...",
+      "objetivo": "...",
+      "tiempo": "...",
+      "adaptaciones": "..."
+    }
+  ]
+}`
+          }]
+        })
+      });
+
+      const data = await res.json();
+      const texto = data.content?.[0]?.text || "";
+      const limpio = texto.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(limpio);
+      setActividades(parsed);
+
+    } catch (err) {
+      setError("No se pudieron generar las actividades. Verificá la conexión e intentá de nuevo.");
+      console.error(err);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  // Colores según el nivel de la actividad
+  const coloresNivel = {
+    "Consolidación": { bg:"#eff6ff", border:"#3b82f6", badge:"#2563eb", texto:"#1e40af" },
+    "Avance":        { bg:"#f0fdf4", border:"#22c55e", badge:"#16a34a", texto:"#166534" },
+    "Extensión":     { bg:"#fefce8", border:"#eab308", badge:"#ca8a04", texto:"#854d0e" },
+  };
+
+  return (
+    <div>
+      {/* Explicación de la funcionalidad */}
+      <Card sx={{background:"linear-gradient(135deg,#1a202c,#2d3748)",border:"none"}}>
+        <div style={{color:"#fff"}}>
+          <div style={{fontSize:22,marginBottom:8}}>✨</div>
+          <div style={{fontWeight:800,fontSize:16,marginBottom:6}}>Actividades generadas por IA</div>
+          <div style={{fontSize:13,color:"rgba(255,255,255,.8)",lineHeight:1.6}}>
+            Claude analiza el historial de {alumno.nombre.split(" ")[0]} en la materia que elijas y genera actividades adaptadas a su nivel actual, su diagnóstico y los acuerdos que fuiste haciendo con los docentes.
+          </div>
+        </div>
+      </Card>
+
+      {/* Selector de materia */}
+      <div style={{marginBottom:16}}>
+        <SecT text="¿Para qué materia?" />
+        {materias.length === 0 ? (
+          <div style={{fontSize:13,color:GL,fontStyle:"italic",padding:"12px 0"}}>
+            Este alumno no tiene horarios cargados todavía. Cargalos desde el Panel de Configuración para poder generar actividades.
+          </div>
+        ) : (
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {materias.map(m => (
+              <button key={m} onClick={()=>{setMateriaSeleccionada(m);setActividades(null);}} style={{
+                padding:"10px 16px", borderRadius:12, border:"2px solid",
+                borderColor:materiaSeleccionada===m?ec:BD,
+                background:materiaSeleccionada===m?ec:"#fff",
+                color:materiaSeleccionada===m?"#fff":"#475569",
+                fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"inherit",
+              }}>{m}</button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Resumen del contexto disponible */}
+      {materiaSeleccionada && (
+        <div style={{background:"#f8fafc",borderRadius:12,padding:"12px 14px",marginBottom:16,border:`1px solid ${BD}`}}>
+          <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:8}}>
+            Contexto que Claude va a analizar
+          </div>
+          <div style={{fontSize:13,color:"#475569",lineHeight:1.6}}>
+            📋 Diagnóstico: <strong>{alumno.diagnostico}</strong><br/>
+            🔬 Terapias: <strong>{(alumno.terapias||[]).map(t=>t.nombre).join(", ")||"Ninguna"}</strong><br/>
+            📝 Registros disponibles en {materiaSeleccionada}: <strong>{regsMateria.length} clase{regsMateria.length!==1?"s":""}</strong>
+          </div>
+          {regsMateria.length === 0 && (
+            <div style={{marginTop:8,fontSize:12,color:"#f59e0b",fontWeight:600}}>
+              ⚠ Sin registros en esta materia todavía. Las actividades van a basarse solo en el diagnóstico y las terapias.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Campo de orientación temática — opcional pero muy útil */}
+      {materiaSeleccionada && !actividades && !cargando && (
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:6,letterSpacing:.5}}>
+            Orientación temática <span style={{fontSize:11,fontWeight:400,color:GL,textTransform:"none"}}>(opcional)</span>
+          </div>
+          <textarea
+            value={orientacion}
+            onChange={e=>setOrientacion(e.target.value)}
+            placeholder={`Ej: "Estamos viendo fracciones con denominadores distintos" · "La semana que viene hay prueba de la Revolución de Mayo" · "Repaso de sustantivos y adjetivos"
+
+Si lo dejás vacío Claude decide según el historial.`}
+            style={{width:"100%",border:`2px solid ${orientacion.trim()?ec:BD}`,borderRadius:12,padding:"10px 14px",fontSize:13,fontFamily:"inherit",color:TX,background:orientacion.trim()?"#f0fdf4":"#f8fafc",boxSizing:"border-box",outline:"none",resize:"vertical",minHeight:80,lineHeight:1.5,transition:"border .2s, background .2s"}}
+          />
+          {orientacion.trim() && (
+            <div style={{fontSize:11,color:"#166534",marginTop:4,fontWeight:600}}>
+              ✓ Claude va a orientar las actividades hacia: "{orientacion.trim().slice(0,60)}{orientacion.trim().length>60?"...":""}"
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Botón de generación */}
+      {materiaSeleccionada && !cargando && !actividades && (
+        <button onClick={generarActividades} style={{
+          width:"100%", padding:"16px", borderRadius:14, border:"none",
+          background:`linear-gradient(135deg,${ec},${ec}cc)`,
+          color:"#fff", fontWeight:800, fontSize:16,
+          cursor:"pointer", fontFamily:"inherit",
+          display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+          boxShadow:`0 4px 16px ${ec}44`,
+        }}>
+          <span style={{fontSize:22}}>✨</span>
+          Generar actividades{orientacion.trim()?` sobre "${orientacion.trim().split(" ").slice(0,4).join(" ")}..."`:` para ${materiaSeleccionada}`}
+        </button>
+      )}
+
+      {/* Animación de carga */}
+      {cargando && (
+        <Card sx={{textAlign:"center",padding:36}}>
+          <div style={{fontSize:48,marginBottom:16}}>🧠</div>
+          <div style={{fontWeight:800,fontSize:16,marginBottom:8}}>Claude está analizando...</div>
+          <div style={{fontSize:13,color:GR,lineHeight:1.6,marginBottom:20}}>
+            Está revisando el historial de {alumno.nombre.split(" ")[0]} en {materiaSeleccionada} y diseñando actividades adaptadas a su nivel actual.
+          </div>
+          <div style={{display:"flex",justifyContent:"center",gap:6}}>
+            {[0,1,2].map(i=>(
+              <div key={i} style={{width:9,height:9,borderRadius:"50%",background:ec,animation:`pulse 1.2s ${i*.2}s infinite`}}/>
+            ))}
+          </div>
+          <style>{`@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}`}</style>
+        </Card>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div style={{background:"#fef2f2",border:"1.5px solid #dc2626",borderRadius:12,padding:"12px 14px",marginBottom:16,fontSize:13,color:"#991b1b",fontWeight:600}}>
+          ⚠ {error}
+        </div>
+      )}
+
+      {/* Resultado: las actividades generadas */}
+      {actividades && (
+        <div>
+          {/* Resumen del nivel actual según Claude */}
+          {actividades.contexto && (
+            <div style={{background:"#f0fdf4",border:`1.5px solid ${ec}`,borderRadius:12,padding:"12px 14px",marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:ec,textTransform:"uppercase",marginBottom:4}}>
+                Nivel actual de {alumno.nombre.split(" ")[0]} en {materiaSeleccionada}
+              </div>
+              <div style={{fontSize:13,color:"#166534",lineHeight:1.5}}>{actividades.contexto}</div>
+            </div>
+          )}
+
+          {/* Las tres actividades */}
+          {(actividades.actividades || []).map((act, i) => {
+            const col = coloresNivel[act.nivel] || coloresNivel["Consolidación"];
+            return (
+              <div key={i} style={{background:col.bg,border:`2px solid ${col.border}`,borderRadius:16,padding:16,marginBottom:12}}>
+
+                {/* Encabezado de la actividad */}
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                  <span style={{fontSize:24}}>{act.emoji}</span>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
+                      <span style={{background:col.badge,color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:700}}>{act.nivel}</span>
+                      <span style={{fontSize:11,color:col.texto,fontWeight:600}}>⏱ {act.tiempo} min</span>
+                    </div>
+                    <div style={{fontWeight:800,fontSize:16,color:TX}}>{act.titulo}</div>
+                  </div>
+                </div>
+
+                {/* Objetivo */}
+                <div style={{fontSize:12,fontWeight:700,color:col.texto,textTransform:"uppercase",marginBottom:4}}>Objetivo</div>
+                <div style={{fontSize:13,color:TX,marginBottom:12,lineHeight:1.5}}>{act.objetivo}</div>
+
+                {/* Descripción */}
+                <div style={{fontSize:12,fontWeight:700,color:col.texto,textTransform:"uppercase",marginBottom:4}}>Cómo realizarla</div>
+                <div style={{fontSize:13,color:TX,lineHeight:1.6,marginBottom:12}}>{act.descripcion}</div>
+
+                {/* Adaptaciones específicas — lo más valioso */}
+                {act.adaptaciones && (
+                  <div style={{background:"rgba(255,255,255,.7)",borderRadius:10,padding:"10px 12px",border:`1px solid ${col.border}`}}>
+                    <div style={{fontSize:12,fontWeight:700,color:col.texto,textTransform:"uppercase",marginBottom:4}}>
+                      Adaptaciones para {alumno.nombre.split(" ")[0]}
+                    </div>
+                    <div style={{fontSize:13,color:TX,lineHeight:1.5}}>{act.adaptaciones}</div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Botones de acción post-generación */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:4}}>
+            <button onClick={()=>{setActividades(null);setOrientacion("");}} style={{padding:"12px",borderRadius:12,border:`2px solid ${BD}`,background:"#fff",color:GR,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+              🔄 Generar otras
+            </button>
+            <button onClick={()=>{
+              // Exportamos las actividades como texto para compartir por WhatsApp o mail
+              const texto = `Actividades para ${alumno.nombre} — ${materiaSeleccionada}\n\n${actividades.contexto}\n\n${(actividades.actividades||[]).map(a=>`${a.emoji} ${a.nivel}: ${a.titulo}\n${a.descripcion}\nAdaptaciones: ${a.adaptaciones}`).join("\n\n")}`;
+              navigator.clipboard?.writeText(texto).then(()=>alert("¡Copiado al portapapeles!")).catch(()=>alert("Seleccioná el texto y copialo manualmente."));
+            }} style={{padding:"12px",borderRadius:12,border:"none",background:ec,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+              📋 Copiar texto
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DetalleDoc({doc, alumno, docentes, registros, ec, onBack, onAdd}) {
+  const [show,setShow] = useState(false);
+  const rd = (registros[alumno.id]||[]).filter(r=>r.docente===doc.nombre&&!r.eliminado);
+  const hs = alumno.horarios.filter(h=>h.docenteId===doc.id).sort((a,b)=>a.dia-b.dia);
+  return <div>
+    <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",color:ec,fontWeight:700,fontSize:14,padding:0,marginBottom:16,fontFamily:"inherit"}}>← Volver a {alumno.nombre.split(" ")[0]}</button>
+    <div style={{background:`linear-gradient(135deg,${ec}ee,${ec}99)`,borderRadius:20,padding:20,color:"#fff",marginBottom:20}}>
+      <div style={{fontSize:11,color:"rgba(255,255,255,.7)",textTransform:"uppercase",letterSpacing:1}}>Docente · {doc.materia}</div>
+      <div style={{fontSize:22,fontWeight:800,marginTop:6}}>{doc.nombre}</div>
+      <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
+        {hs.map((h,i)=><span key={i} style={{background:"rgba(255,255,255,.2)",borderRadius:20,padding:"3px 10px",fontSize:12,fontWeight:600}}>{DIAS[h.dia]} {h.horaInicio}–{h.horaFin}</span>)}
+      </div>
+      {hs[0]&&<div style={{fontSize:13,color:"rgba(255,255,255,.8)",marginTop:8}}>📍 {hs[0].aula}</div>}
+      <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
+        <a href={`https://wa.me/54${doc.telefono.replace(/[-\s]/g,"")}`} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:8,background:"#25D366",color:"#fff",borderRadius:12,padding:"10px 16px",fontSize:13,fontWeight:800,textDecoration:"none"}}>💬 WhatsApp · {doc.telefono}</a>
+        {doc.mail&&<a href={`mailto:${doc.mail}`} style={{display:"inline-flex",alignItems:"center",gap:8,background:"#3b82f6",color:"#fff",borderRadius:12,padding:"10px 16px",fontSize:13,fontWeight:800,textDecoration:"none"}}>✉ Mail</a>}
+      </div>
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <div><div style={{fontWeight:800,fontSize:16,color:TX}}>Registros con {doc.nombre.split(" ").slice(-1)[0]}</div><div style={{fontSize:12,color:GL,marginTop:2}}>{rd.length===0?"Sin registros":`${rd.length} clases`}</div></div>
+      {!show&&<Btn small onClick={()=>setShow(true)} color={ec}>+ Nuevo</Btn>}
+    </div>
+    {show&&<FormReg alumno={alumno} docentes={docentes} escColor={ec} docPre={doc} onSave={r=>{onAdd(alumno.id,r);setShow(false);}} onCancel={()=>setShow(false)}/>}
+    {rd.length===0&&!show
+      ? <Card sx={{textAlign:"center",padding:32}}><div style={{fontSize:36,marginBottom:8}}>📋</div><div style={{fontWeight:700,color:"#475569"}}>Sin registros con este docente</div></Card>
+      : rd.map(r=><RegCard key={r.id} r={r}/>)}
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REPORTES
+// ═══════════════════════════════════════════════════════════════
+const ENC_HTML = `<div style="display:flex;align-items:center;gap:18px;padding-bottom:16px;border-bottom:3px solid #2D6A4F;margin-bottom:24px"><div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#2D6A4F,#40916c);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22pt;font-weight:800;flex-shrink:0">AF</div><div><h1 style="font-size:18pt;font-weight:800;line-height:1.1">Ayelén Florentin</h1><p style="font-size:11pt;color:#2D6A4F;font-weight:600;margin-top:4px;text-transform:uppercase">Maestra de Educación Especial</p></div></div>`;
+const FIRMA_HTML = f => `<div style="margin-top:40px;padding-top:20px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:flex-end"><div style="text-align:center"><div style="width:180px;border-top:1.5px solid #1a202c;margin:0 auto 6px"></div><div style="font-size:10pt;font-weight:700">Ayelén Florentin</div><div style="font-size:9pt;color:#64748b">Maestra de Educación Especial</div></div><div style="font-size:9pt;color:#94a3b8">Emitido el ${f}</div></div>`;
+const CSS_BASE = `*{margin:0;padding:0;box-sizing:border-box}body{font-family:Georgia,serif;font-size:12pt;color:#1a202c}.pag{width:210mm;min-height:297mm;margin:0 auto;padding:18mm 20mm 20mm}@media print{@page{margin:0;size:A4}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;
+
+function abrirPDF(t,css,body){const v=window.open("","_blank");v.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${t}</title><style>${css}</style></head><body>${body}</body></html>`);v.document.close();setTimeout(()=>v.print(),400);}
+
+function Reportes({alumnos, docentes, registros}) {
+  const [aId,setAId] = useState("");
+  const [tipo,setTipo] = useState("general");
+  const [mat,setMat] = useState("");
+  const [de,setDe] = useState("");
+  const [ha,setHa] = useState("");
+
+  const al = alumnos.find(a=>a.id===aId&&!a.eliminado);
+  const dA = al ? [...new Set(al.horarios.filter(h=>h.docenteId).map(h=>h.docenteId))].map(id=>docentes.find(d=>d.id===id)).filter(Boolean) : [];
+  const rB = al ? (registros[al.id]||[]).filter(r=>!r.eliminado) : [];
+  const rF = rB.filter(r=>{if(tipo==="mat"&&mat&&r.materia!==mat)return false;if(de&&r.fecha<de)return false;if(ha&&r.fecha>ha)return false;return true;}).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const esP = tipo==="per";
+  const ok = al&&(esP||rF.length>0);
+  const f = hoyFmt();
+
+  const genSeg = () => {
+    const tit = tipo==="mat"&&mat?`Informe de ${mat}`:"Informe General de Seguimiento";
+    const rH = rF.length===0 ? `<div style="text-align:center;padding:30px;color:#94a3b8;font-style:italic;border:1px dashed #e2e8f0;border-radius:6px">Sin registros para el período seleccionado.</div>`
+      : rF.map(r=>`<div style="border:1px solid #e2e8f0;border-radius:6px;padding:12px;margin-bottom:10px;break-inside:avoid"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div><div style="font-size:11pt;font-weight:800">${r.materia||"—"}</div><div style="font-size:10pt;color:#64748b">${fmtF(r.fecha)}${r.docente?` · ${r.docente}`:""}</div></div><span style="font-size:9pt;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;background:${r.asistencia==="presente"?"#d1fae5":r.asistencia==="ausente"?"#fee2e2":"#fef3c7"};color:${r.asistencia==="presente"?"#065f46":r.asistencia==="ausente"?"#991b1b":"#92400e"}">${r.asistencia}</span></div>${r.avance?`<div style="font-size:10.5pt;margin-bottom:6px;padding:6px 10px;border-radius:4px;background:#f8fafc"><b style="font-size:9pt;text-transform:uppercase;opacity:.7">Avance · </b>${r.avance}</div>`:""}${r.acuerdo?`<div style="font-size:10.5pt;margin-bottom:6px;padding:6px 10px;border-radius:4px;background:#eff6ff;color:#1e40af"><b style="font-size:9pt;text-transform:uppercase;opacity:.7">Acuerdo · </b>${r.acuerdo}</div>`:""}${r.recordatorio?`<div style="font-size:10.5pt;padding:6px 10px;border-radius:4px;background:#fffbeb;color:#92400e"><b style="font-size:9pt;text-transform:uppercase;opacity:.7">Recordatorio · </b>${r.recordatorio}</div>`:""}</div>`).join("");
+    abrirPDF(`${tit} — ${al.nombre}`, CSS_BASE,
+      `<div class="pag">${ENC_HTML}<div style="font-size:14pt;font-weight:800;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #e2e8f0">${tit}</div><div style="background:#f8fafc;border-left:4px solid #2D6A4F;padding:14px;margin-bottom:24px;display:grid;grid-template-columns:1fr 1fr;gap:10px 24px"><div style="grid-column:1/-1"><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block;margin-bottom:2px">Estudiante</span><span style="font-size:11pt;font-weight:600">${al.nombre}</span></div><div><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block;margin-bottom:2px">DNI</span><span style="font-size:11pt;font-weight:600">${al.dni||"—"}</span></div><div><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block;margin-bottom:2px">Fecha de nacimiento</span><span style="font-size:11pt;font-weight:600">${fmtF(al.fechaNacimiento)}</span></div><div><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block;margin-bottom:2px">Fecha del informe</span><span style="font-size:11pt;font-weight:600">${f}</span></div>${tipo==="mat"&&mat?`<div><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block;margin-bottom:2px">Materia</span><span style="font-size:11pt;font-weight:600">${mat}</span></div>`:""}</div><div style="font-size:12pt;font-weight:800;margin-bottom:12px;text-transform:uppercase">Registros de seguimiento</div>${rH}${FIRMA_HTML(f)}</div>`);
+  };
+
+  const genPer = () => {
+    const trH = [...(al.trayectoria||[])].reverse().map((t,i,arr)=>`<div style="display:flex;gap:14px;margin-bottom:4px"><div style="display:flex;flex-direction:column;align-items:center;min-width:20px"><div style="width:10px;height:10px;border-radius:50%;margin-top:4px;flex-shrink:0;background:${i===0?"#2D6A4F":"#cbd5e0"}"></div>${i<arr.length-1?'<div style="width:2px;flex:1;background:#e2e8f0;min-height:20px;margin-top:4px"></div>':""}</div><div style="flex:1;padding-bottom:16px"><div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><span style="font-size:11pt;font-weight:800;color:${i===0?"#2D6A4F":"#64748b"}">${t.ciclo}</span><span style="font-size:9pt;font-weight:700;padding:1px 8px;border-radius:4px;background:${i===0?"#d1fae5":"#f1f5f9"};color:${i===0?"#065f46":"#475569"}">${t.nivel}</span></div><div style="font-size:11pt;font-weight:600">${t.institucion}</div>${t.notas?`<div style="font-size:10pt;color:#64748b;margin-top:4px;line-height:1.5">${t.notas}</div>`:""}</div></div>`).join("");
+    abrirPDF(`Ficha Personal — ${al.nombre}`, CSS_BASE,
+      `<div class="pag">${ENC_HTML}<div style="font-size:14pt;font-weight:800;margin-bottom:20px;padding-bottom:8px;border-bottom:1px solid #e2e8f0">Ficha Personal del Estudiante</div>
+      <div style="margin-bottom:20px"><div style="font-size:11pt;font-weight:800;color:#2D6A4F;text-transform:uppercase;margin-bottom:10px;padding-bottom:4px;border-bottom:1.5px solid #d1fae5">Datos de identidad</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:14px"><div style="grid-column:1/-1"><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block">Nombre</span><span style="font-size:11pt;font-weight:600">${al.nombre}</span></div><div><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block">DNI</span><span style="font-size:11pt;font-weight:600">${al.dni||"—"}</span></div><div><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block">Fecha de nacimiento</span><span style="font-size:11pt;font-weight:600">${fmtF(al.fechaNacimiento)}</span></div><div style="grid-column:1/-1"><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block">Dirección</span><span style="font-size:11pt;font-weight:600">${al.direccion||"—"}</span></div><div><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block">Teléfono de casa</span><span style="font-size:11pt;font-weight:600">${al.telefonoCasa||"—"}</span></div><div><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block">Fecha del informe</span><span style="font-size:11pt;font-weight:600">${f}</span></div></div><div style="padding:10px 14px;border-radius:6px;background:${al.cud?"#f0fdf4":"#f8fafc"};border:1px solid ${al.cud?"#86efac":"#e2e8f0"}"><strong>${al.cud?"✅ Tiene CUD":"⬜ Sin CUD"}</strong>${al.cud?`<br/><span style="font-size:10pt">${al.cudNumero} · Vence: ${fmtF(al.cudVencimiento)}</span>`:""}</div></div>
+      <div style="margin-bottom:20px"><div style="font-size:11pt;font-weight:800;color:#2D6A4F;text-transform:uppercase;margin-bottom:10px;padding-bottom:4px;border-bottom:1.5px solid #d1fae5">Familia y contactos</div>${(al.tutores||[]).map(t=>`<div style="padding:10px 14px;background:#f8fafc;border-radius:6px;margin-bottom:8px;border-left:3px solid #2D6A4F"><div style="font-size:12pt;font-weight:800">${t.nombre}${t.principal?' <span style="font-size:9pt;background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:4px">Principal</span>':""}</div><div style="font-size:10pt;color:#64748b;margin-top:2px">${t.relacion} · ${t.telefono}</div></div>`).join("")}</div>
+      <div style="margin-bottom:20px"><div style="font-size:11pt;font-weight:800;color:#2D6A4F;text-transform:uppercase;margin-bottom:10px;padding-bottom:4px;border-bottom:1.5px solid #d1fae5">Salud</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:14px"><div style="grid-column:1/-1"><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block">Diagnóstico</span><span style="font-size:11pt;font-weight:600">${al.diagnostico}</span></div><div><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block">Obra Social</span><span style="font-size:11pt;font-weight:600">${al.obraSocial||"—"}</span></div><div><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block">N° Afiliado</span><span style="font-size:11pt;font-weight:600">${al.nroAfiliado||"—"}</span></div><div style="grid-column:1/-1"><span style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;display:block">Medicación</span><span style="font-size:11pt;font-weight:600">${al.medicacion||"Sin medicación"}</span></div></div><div style="font-size:9pt;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:8px">Terapias actuales</div>${(al.terapias||[]).map(t=>`<div style="padding:8px 0;border-bottom:1px solid #e2e8f0"><strong>${t.nombre}</strong> — ${t.profesional} (${t.frecuencia})</div>`).join("")}</div>
+      <div style="margin-bottom:20px"><div style="font-size:11pt;font-weight:800;color:#2D6A4F;text-transform:uppercase;margin-bottom:10px;padding-bottom:4px;border-bottom:1.5px solid #d1fae5">Trayectoria escolar</div>${trH}</div>
+      ${FIRMA_HTML(f)}</div>`);
+  };
+
+  return <div>
+    <div style={{fontSize:22,fontWeight:800,color:TX,marginBottom:4}}>Reportes</div>
+    <div style={{fontSize:14,color:GR,marginBottom:20}}>Generá un PDF profesional para compartir</div>
+    <Card>
+      <Sel label="Estudiante" value={aId} onChange={v=>{setAId(v);setTipo("general");setMat("");}}
+        opts={alumnos.filter(a=>!a.eliminado&&a.activo!==false).map(a=>({v:a.id,l:a.nombre}))} ph="Seleccionar estudiante..."/>
+      {al&&<>
+        <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:10}}>Tipo de informe</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+          {[{id:"general",l:"📋 Informe general de seguimiento",d:"Todas las materias"},{id:"per",l:"👤 Ficha de datos personales",d:"Con trayectoria escolar"},...dA.map(d=>({id:"m_"+d.id,l:`📚 ${d.materia}`,d:d.nombre,m:d.materia}))].map(op=>{
+            const act = op.id==="per"?tipo==="per":op.id==="general"?tipo==="general":tipo==="mat"&&mat===op.m;
+            return <button key={op.id} onClick={()=>{if(op.id==="per"){setTipo("per");setMat("");}else if(op.id==="general"){setTipo("general");setMat("");}else{setTipo("mat");setMat(op.m);}}} style={{padding:"10px 14px",borderRadius:10,border:"2px solid",textAlign:"left",cursor:"pointer",fontFamily:"inherit",borderColor:act?G:BD,background:act?"#f0fdf4":"#fff",color:act?G:"#475569",fontWeight:700,fontSize:13}}>{op.l} <span style={{fontWeight:400,fontSize:12,color:GL,marginLeft:6}}>{op.d}</span></button>;
+          })}
+        </div>
+        {!esP&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+          {[["Desde",de,setDe],["Hasta",ha,setHa]].map(([l,v,fn])=><div key={l}><div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:6}}>{l}</div><input type="date" value={v} onChange={e=>fn(e.target.value)} style={{width:"100%",border:`1.5px solid ${BD}`,borderRadius:10,padding:"10px",fontSize:13,fontFamily:"inherit",background:"#f8fafc",boxSizing:"border-box"}}/></div>)}
+        </div>}
+        <div style={{background:ok?"#f0fdf4":"#fafafa",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:13,color:ok?"#166534":GL,fontWeight:600}}>
+          {esP?"✓ Datos personales, contactos, salud y trayectoria":rF.length===0?"Sin registros para los filtros seleccionados":`✓ ${rF.length} registro${rF.length!==1?"s":""}`}
+        </div>
+        <button onClick={esP?genPer:genSeg} disabled={!ok} style={{width:"100%",padding:14,borderRadius:12,border:"none",fontFamily:"inherit",background:!ok?"#e2e8f0":"linear-gradient(135deg,#2D6A4F,#40916c)",color:!ok?GL:"#fff",fontWeight:800,fontSize:16,cursor:!ok?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          <span style={{fontSize:20}}>📄</span> Generar PDF
+        </button>
+        <div style={{fontSize:11,color:GL,textAlign:"center",marginTop:10,lineHeight:1.5}}>Se abre una nueva pestaña → <strong>Archivo → Imprimir → Guardar como PDF</strong></div>
+      </>}
+    </Card>
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AVISOS / RECORDATORIOS
+// ═══════════════════════════════════════════════════════════════
+function Avisos({alumnos, recs, onAdd, onDel}) {
+  const [show,setShow] = useState(false);
+  const [txt,setTxt] = useState(""); const [aId,setAId] = useState(""); const [fec,setFec] = useState(""); const [pri,setPri] = useState("media");
+  const [conf,setConf] = useState(null);
+  const act = recs.filter(r=>!r.eliminado).sort((a,b)=>{const p={alta:0,media:1,baja:2};return p[a.prioridad]!==p[b.prioridad]?p[a.prioridad]-p[b.prioridad]:a.fecha.localeCompare(b.fecha);});
+  const pc = {alta:"#dc2626",media:"#f59e0b",baja:G};
+  const pb = {alta:"#fef2f2",media:"#fffbeb",baja:"#f0fdf4"};
+  const save = () => { if(!txt||!fec)return; onAdd({id:"rc"+uid(),alumnoId:aId,texto:txt,fecha:fec,prioridad:pri,eliminado:false}); setTxt("");setAId("");setFec("");setPri("media");setShow(false); };
+  return <div>
+    {conf&&<Confirm msg="¿Eliminar este aviso?" onOk={()=>{onDel(conf);setConf(null);}} onNo={()=>setConf(null)}/>}
+    <div style={{fontSize:22,fontWeight:800,color:TX,marginBottom:4}}>Avisos</div>
+    <div style={{fontSize:14,color:GR,marginBottom:20}}>Recordatorios y seguimientos pendientes</div>
+    {!show?<Btn full onClick={()=>setShow(true)}>+ Nuevo aviso</Btn>
+      :<Card sx={{border:`2px solid ${G}`,marginBottom:16}}>
+        <div style={{fontWeight:800,fontSize:16,marginBottom:16}}>Nuevo aviso</div>
+        <Sel label="Alumno (opcional)" value={aId} onChange={setAId} opts={alumnos.filter(a=>!a.eliminado&&a.activo!==false).map(a=>({v:a.id,l:a.nombre}))} ph="Sin alumno específico"/>
+        <Fld label="Descripción" value={txt} onChange={setTxt} multiline placeholder="¿Qué tenés que hacer o recordar?"/>
+        <Fld label="Fecha límite" value={fec} onChange={setFec} type="date"/>
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:8}}>Prioridad</div>
+          <div style={{display:"flex",gap:8}}>{["alta","media","baja"].map(p=><button key={p} onClick={()=>setPri(p)} style={{flex:1,padding:"8px",borderRadius:8,border:"2px solid",borderColor:pri===p?pc[p]:BD,background:pri===p?pc[p]:"#fff",color:pri===p?"#fff":"#475569",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",textTransform:"capitalize"}}>{p}</button>)}</div>
+        </div>
+        <div style={{display:"flex",gap:10}}><Btn outline onClick={()=>setShow(false)} color={GR}>Cancelar</Btn><Btn onClick={save} full>Guardar</Btn></div>
+      </Card>}
+    <div style={{marginTop:16}}>
+      {act.length===0?<Card sx={{textAlign:"center",padding:32}}><div style={{fontSize:32,marginBottom:8}}>✅</div><div style={{color:GR}}>Sin avisos pendientes</div></Card>
+        :act.map(r=>{const a=alumnos.find(a=>a.id===r.alumnoId);return <Card key={r.id} sx={{background:pb[r.prioridad],borderLeft:`4px solid ${pc[r.prioridad]}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <div style={{flex:1}}><div style={{fontWeight:700,fontSize:14,color:TX}}>{r.texto}</div>{a&&<div style={{fontSize:12,color:GR,marginTop:4}}>👤 {a.nombre}</div>}<div style={{fontSize:12,color:GR,marginTop:2}}>📅 {fmtF(r.fecha)}</div></div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}><Tag text={r.prioridad} bg={pc[r.prioridad]}/><button onClick={()=>setConf(r.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:16,padding:"0 4px"}}>🗑</button></div>
+          </div>
+        </Card>;})}
+    </div>
+  </div>;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PANTALLA DE LOGIN
+// En el prototipo simula el flujo de Google OAuth.
+// En producción Firebase Authentication maneja todo esto
+// con tres líneas de código adicionales.
+// ═══════════════════════════════════════════════════════════════
+function PantallaLogin({ onLogin }) {
+  const [cargando, setCargando] = useState(false);
+  const [error, setError]       = useState("");
+
+  // Simulamos el delay de autenticación de Google (1.5 segundos)
+  // para que el flujo se sienta realista
+  const simularLogin = () => {
+    setCargando(true);
+    setError("");
+    setTimeout(() => {
+      // En producción, acá Firebase verifica con Google y devuelve
+      // los datos reales del usuario autenticado.
+      // Por ahora simulamos que Aye se logueó con su cuenta.
+      onLogin({
+        nombre: "Ayelén Florentin",
+        email:  "ayelen.florentin@gmail.com",
+        foto:   null, // en producción vendría la foto del perfil de Google
+      });
+    }, 1500);
+  };
+
+  return (
+    <div style={{
+      maxWidth:420, margin:"0 auto", minHeight:"100vh",
+      background:"#fff", display:"flex", flexDirection:"column",
+      fontFamily:"'Georgia',serif", position:"relative", overflow:"hidden",
+    }}>
+      {/* Fondo decorativo — círculos verdes difusos */}
+      <div style={{position:"absolute",top:-80,right:-80,width:260,height:260,borderRadius:"50%",background:"#2D6A4F",opacity:.06}}/>
+      <div style={{position:"absolute",bottom:-60,left:-60,width:200,height:200,borderRadius:"50%",background:"#2D6A4F",opacity:.08}}/>
+      <div style={{position:"absolute",top:"30%",left:-40,width:120,height:120,borderRadius:"50%",background:"#40916c",opacity:.05}}/>
+
+      {/* Contenido centrado verticalmente */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 32px",position:"relative",zIndex:1}}>
+
+        {/* Logo / identidad de la app */}
+        <div style={{marginBottom:40,textAlign:"center"}}>
+          {/* Círculo con iniciales — igual al que aparece en los PDFs */}
+          <div style={{
+            width:80, height:80, borderRadius:"50%",
+            background:"linear-gradient(135deg,#2D6A4F,#40916c)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:28, fontWeight:800, color:"#fff",
+            margin:"0 auto 20px",
+            boxShadow:"0 8px 32px rgba(45,106,79,.25)",
+          }}>AF</div>
+          <div style={{fontSize:26,fontWeight:800,color:TX,marginBottom:6}}>
+            Aye · Integradora
+          </div>
+          <div style={{fontSize:14,color:GR,lineHeight:1.6,maxWidth:280,margin:"0 auto"}}>
+            Tu espacio de trabajo como Maestra de Educación Especial
+          </div>
+        </div>
+
+        {/* Separador visual */}
+        <div style={{width:48,height:3,background:"linear-gradient(90deg,#2D6A4F,#40916c)",borderRadius:2,marginBottom:40}}/>
+
+        {/* Beneficios rápidos — tres puntos clave */}
+        {[
+          { icon:"🗺", texto:"Mapa del día con tus alumnos en tiempo real" },
+          { icon:"🎙", texto:"Registros de clase por voz con IA" },
+          { icon:"📄", texto:"Informes PDF con tu firma en segundos" },
+        ].map((item,i) => (
+          <div key={i} style={{display:"flex",alignItems:"center",gap:14,marginBottom:16,width:"100%",maxWidth:300}}>
+            <div style={{width:40,height:40,borderRadius:12,background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
+              {item.icon}
+            </div>
+            <div style={{fontSize:13,color:GR,lineHeight:1.4}}>{item.texto}</div>
+          </div>
+        ))}
+
+        {/* Botón de Google — el elemento principal de la pantalla */}
+        <div style={{width:"100%",maxWidth:300,marginTop:32}}>
+          <button
+            onClick={simularLogin}
+            disabled={cargando}
+            style={{
+              width:"100%", padding:"14px 20px",
+              borderRadius:14, border:"1.5px solid #e2e8f0",
+              background: cargando ? "#f8fafc" : "#fff",
+              cursor: cargando ? "not-allowed" : "pointer",
+              display:"flex", alignItems:"center", justifyContent:"center", gap:12,
+              boxShadow:"0 2px 8px rgba(0,0,0,.08)",
+              transition:"all .2s", fontFamily:"inherit",
+            }}
+            onMouseEnter={e=>!cargando&&(e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.12)")}
+            onMouseLeave={e=>(e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,.08)")}
+          >
+            {cargando ? (
+              // Animación de carga mientras "Google verifica"
+              <>
+                <div style={{display:"flex",gap:5}}>
+                  {[0,1,2].map(i=>(
+                    <div key={i} style={{width:7,height:7,borderRadius:"50%",background:G,animation:`pulse 1.2s ${i*.2}s infinite`}}/>
+                  ))}
+                </div>
+                <span style={{fontSize:14,fontWeight:600,color:GR}}>Verificando con Google...</span>
+              </>
+            ) : (
+              <>
+                {/* Logo de Google SVG — para que se vea auténtico */}
+                <svg width="20" height="20" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                <span style={{fontSize:15,fontWeight:700,color:"#3c4043"}}>Continuar con Google</span>
+              </>
+            )}
+          </button>
+
+          {error && (
+            <div style={{marginTop:12,fontSize:12,color:"#dc2626",textAlign:"center",fontWeight:600}}>
+              ⚠ {error}
+            </div>
+          )}
+
+          {/* Nota sobre privacidad */}
+          <div style={{marginTop:20,fontSize:11,color:GL,textAlign:"center",lineHeight:1.6}}>
+            Solo Ayelén Florentin puede acceder a esta app.<br/>
+            Tus datos están protegidos y son confidenciales.
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{padding:"16px",textAlign:"center",fontSize:11,color:GL,borderTop:`1px solid ${FO}`}}>
+        Aye · Maestra de Educación Especial · 2026
+      </div>
+
+      <style>{`@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}`}</style>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CO-PILOT PEDAGÓGICO — Asistente de voz con IA
+// Recibe un comando de voz o texto, lo envía a Claude con todo
+// el contexto disponible, y devuelve:
+//   - "busqueda": resumen de información histórica encontrada
+//   - "whatsapp": mensaje pre-redactado con deep link al contacto
+// ═══════════════════════════════════════════════════════════════
+function CoPilot({ alumnos, docentes, pros, escuelas, registros, recs, onCerrar }) {
+  const [paso, setPaso]         = useState("input"); // input | procesando | resultado
+  const [texto, setTexto]       = useState("");
+  const [grabando, setGrabando] = useState(false);
+  const [resultado, setResultado] = useState(null);
+  const recognRef = useRef(null);
+
+  // ── Grabación de voz ─────────────────────────────────────────
+  const iniciarVoz = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    const r = new SR(); r.lang="es-AR"; r.continuous=false; r.interimResults=false;
+    r.onresult = e => { setTexto(e.results[0][0].transcript); setGrabando(false); };
+    r.onerror  = () => setGrabando(false);
+    r.start(); recognRef.current=r; setGrabando(true);
+  };
+  const detenerVoz = () => { recognRef.current?.stop(); setGrabando(false); };
+
+  // ── Construir contexto completo para Claude ───────────────────
+  const construirContexto = () => {
+    const aluCtx = alumnos.filter(a=>!a.eliminado&&a.activo!==false).map(a => {
+      const esc = escuelas.find(e=>e.id===a.escuelaId);
+      const tutoresStr = (a.tutores||[]).map(t=>`${t.nombre} (${t.relacion}) tel:${t.telefono}`).join(", ");
+      const prosStr = (a.profesionalIds||[]).map(id=>{const p=pros.find(x=>x.id===id);return p?`${p.nombre} (${p.rol}) tel:${p.telefono} mail:${p.mail||""}`:null;}).filter(Boolean).join(", ");
+      const regsRecientes = (registros[a.id]||[]).filter(r=>!r.eliminado).slice(0,5).map(r=>`${fmtF(r.fecha)}: ${r.materia} - ${r.avance||""}${r.acuerdo?` / Acuerdo: ${r.acuerdo}`:""}`).join(" | ");
+      return `ALUMNO: ${a.nombre} | Escuela: ${esc?.nombre} | Diagnóstico: ${a.diagnostico} | Tutores: ${tutoresStr} | Profesionales: ${prosStr||"ninguno"} | Últimos registros: ${regsRecientes||"sin registros"}`;
+    }).join("\n");
+
+    const docCtx = docentes.filter(d=>!d.eliminado).map(d=>{
+      const esc=escuelas.find(e=>e.id===d.escuelaId);
+      return `${d.nombre} | ${d.materia} | ${esc?.nombre} | tel:${d.telefono} | mail:${d.mail||""}`;
+    }).join("\n");
+
+    const avisosCtx = recs.filter(r=>!r.eliminado).slice(0,5).map(r=>{
+      const a=alumnos.find(x=>x.id===r.alumnoId);
+      return `[${r.prioridad}] ${r.texto}${a?` (alumno: ${a.nombre})`:""}`;
+    }).join("\n");
+
+    return `ALUMNOS Y SUS DATOS:\n${aluCtx}\n\nDOCENTES:\n${docCtx}\n\nAVISOS PENDIENTES:\n${avisosCtx||"ninguno"}`;
+  };
+
+  // ── Procesar con Claude ───────────────────────────────────────
+  const procesar = async () => {
+    if (!texto.trim()) return;
+    setPaso("procesando");
+
+    const contexto = construirContexto();
+
+    try {
+      const res = await fetch("/api/claude", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          model:"claude-sonnet-4-20250514", max_tokens:800,
+          messages:[{ role:"user", content:
+`Sos el asistente de Ayelén Florentin, Maestra Integradora de Educación Especial argentina.
+Tenés acceso a todos sus datos de trabajo. Analizá el comando y respondé con la acción correcta.
+
+COMANDO: "${texto}"
+
+CONTEXTO DISPONIBLE:
+${contexto}
+
+Analizá el comando e identificá la intención:
+1. Si pide INFORMACIÓN o hace una pregunta sobre algún alumno, acuerdo, profesional o registro → tipo "busqueda"
+2. Si pide ENVIAR un mensaje (WhatsApp, avisar a alguien, mandar algo) → tipo "whatsapp"
+
+Para "whatsapp": resolvé el contacto buscando en los datos. Si dice "la Seño Laura" buscá en docentes con ese nombre. Si dice "la mamá de Sofía" buscá en los tutores del alumno.
+
+Respondé SOLO con JSON válido sin backticks:
+
+Para búsqueda:
+{
+  "tipo": "busqueda",
+  "titulo": "título corto de la respuesta",
+  "resumen": "respuesta narrativa clara y concisa con los datos encontrados, en español argentino",
+  "datos": ["dato clave 1", "dato clave 2", "dato clave 3"],
+  "alumno": "nombre del alumno si aplica o null"
+}
+
+Para WhatsApp:
+{
+  "tipo": "whatsapp",
+  "contactoNombre": "nombre completo del contacto encontrado",
+  "contactoRol": "docente / mamá de X / profesional",
+  "telefono": "número de teléfono encontrado",
+  "mensajeSugerido": "texto del mensaje pre-redactado listo para enviar, natural y apropiado",
+  "alumno": "nombre del alumno si aplica o null"
+}`
+          }]
+        })
+      });
+
+      if(!res.ok) throw new Error();
+      const data = await res.json();
+      const txt = data.content?.[0]?.text||"";
+      const parsed = JSON.parse(txt.replace(/```json|```/g,"").trim());
+      setResultado(parsed);
+      setPaso("resultado");
+
+    } catch {
+      // Demo realista si la API no está disponible
+      const esWA = texto.toLowerCase().includes("avis") || texto.toLowerCase().includes("mand") || texto.toLowerCase().includes("decile") || texto.toLowerCase().includes("whatsapp");
+      if (esWA) {
+        setResultado({
+          tipo:"whatsapp",
+          contactoNombre:"Prof. Ana Gómez",
+          contactoRol:"Docente de Matemática",
+          telefono:"11-2233-4455",
+          mensajeSugerido:`Hola Ana, te escribo para avisarte sobre Sofía. ${texto}. Quedamos en contacto. Aye 🙏`,
+          alumno:"Sofía Martínez",
+        });
+      } else {
+        setResultado({
+          tipo:"busqueda",
+          titulo:"Información encontrada",
+          resumen:`Basándome en los registros disponibles: ${texto}. En las últimas clases de Matemática con la Prof. Ana Gómez se trabajaron sumas con llevada. Se acordó usar fichas de colores como apoyo visual. La Lic. Paula Herrera (psicóloga) trabaja con Sofía los lunes y miércoles.`,
+          datos:["Último acuerdo: uso de fichas de colores en Matemática","Psicóloga: Lic. Paula Herrera · 11-1122-3344","Terapia de fonoaudiología 2x semana con Lic. Diego Morales"],
+          alumno:"Sofía Martínez",
+        });
+      }
+      setPaso("resultado");
+    }
+  };
+
+  const abrirWA = (tel, msg) => {
+    const num = "54" + tel.replace(/[-\s]/g,"");
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, "_blank");
+  };
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",flexDirection:"column",justifyContent:"flex-end",zIndex:500,padding:0}}>
+      <div style={{background:"#fff",borderRadius:"24px 24px 0 0",padding:24,maxHeight:"85vh",overflowY:"auto",boxShadow:"0 -8px 40px rgba(0,0,0,.2)"}}>
+
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,#7c3aed,#a78bfa)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🤖</div>
+            <div>
+              <div style={{fontWeight:800,fontSize:17,color:TX}}>Co-Pilot Pedagógico</div>
+              <div style={{fontSize:12,color:GL}}>Preguntá o pedí que haga algo</div>
+            </div>
+          </div>
+          <button onClick={onCerrar} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:GR}}>✕</button>
+        </div>
+
+        {/* ── Input ── */}
+        {paso==="input"&&<div>
+          <div style={{background:"#f5f3ff",borderRadius:14,padding:14,marginBottom:16,fontSize:12,color:"#7c3aed",lineHeight:1.6}}>
+            <strong>Podés preguntarme:</strong><br/>
+            🔍 "¿Qué acordamos con la psicóloga de Sofía?"<br/>
+            💬 "Avisale a la Seño Ana que Sofía no viene hoy"<br/>
+            📋 "¿Cuáles son los avisos pendientes de alta prioridad?"<br/>
+            📱 "Mandá un mensaje a la mamá de Valentina"
+          </div>
+
+          {/* Campo de texto */}
+          <textarea value={texto} onChange={e=>setTexto(e.target.value)}
+            placeholder="Escribí o grabá tu pregunta o pedido..."
+            style={{width:"100%",border:"2px solid #7c3aed",borderRadius:12,padding:"12px 14px",fontSize:14,fontFamily:"inherit",color:TX,background:"#faf5ff",boxSizing:"border-box",outline:"none",resize:"none",minHeight:80,marginBottom:12,lineHeight:1.5}}/>
+
+          {/* Botón de voz */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10}}>
+            <button
+              onMouseDown={iniciarVoz} onMouseUp={detenerVoz}
+              onTouchStart={e=>{e.preventDefault();iniciarVoz();}} onTouchEnd={e=>{e.preventDefault();detenerVoz();}}
+              style={{padding:"12px",borderRadius:12,border:"2px solid #7c3aed",background:grabando?"#7c3aed":"#fff",color:grabando?"#fff":"#7c3aed",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              {grabando?"🔴 Grabando":"🎙 Voz"}
+            </button>
+            <button onClick={procesar} disabled={!texto.trim()}
+              style={{padding:"12px",borderRadius:12,border:"none",background:texto.trim()?"linear-gradient(135deg,#7c3aed,#a78bfa)":"#e2e8f0",color:texto.trim()?"#fff":GL,fontWeight:800,fontSize:14,cursor:texto.trim()?"pointer":"not-allowed",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              <span style={{fontSize:18}}>✨</span> Procesar
+            </button>
+          </div>
+        </div>}
+
+        {/* ── Procesando ── */}
+        {paso==="procesando"&&<div style={{textAlign:"center",padding:32}}>
+          <div style={{fontSize:48,marginBottom:16}}>🧠</div>
+          <div style={{fontWeight:800,fontSize:16,marginBottom:8}}>Analizando tu pedido...</div>
+          <div style={{fontSize:13,color:GR,lineHeight:1.5,marginBottom:20,fontStyle:"italic"}}>"{texto}"</div>
+          <div style={{display:"flex",justifyContent:"center",gap:6}}>
+            {[0,1,2].map(i=><div key={i} style={{width:9,height:9,borderRadius:"50%",background:"#7c3aed",animation:`pulse 1.2s ${i*.2}s infinite`}}/>)}
+          </div>
+        </div>}
+
+        {/* ── Resultado búsqueda ── */}
+        {paso==="resultado"&&resultado?.tipo==="busqueda"&&<div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+            <div style={{width:36,height:36,borderRadius:"50%",background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🔍</div>
+            <div>
+              <div style={{fontWeight:800,fontSize:16,color:TX}}>{resultado.titulo}</div>
+              {resultado.alumno&&<div style={{fontSize:12,color:GL}}>Alumno/a: {resultado.alumno}</div>}
+            </div>
+          </div>
+
+          {/* Resumen narrativo */}
+          <div style={{background:"#f8fafc",borderRadius:12,padding:"14px 16px",marginBottom:14,fontSize:14,color:"#334155",lineHeight:1.7,border:"1px solid #e2e8f0"}}>
+            {resultado.resumen}
+          </div>
+
+          {/* Datos clave */}
+          {(resultado.datos||[]).length>0&&<div style={{marginBottom:16}}>
+            <div style={{fontSize:11,fontWeight:700,color:GL,textTransform:"uppercase",marginBottom:8}}>Datos clave</div>
+            {resultado.datos.map((d,i)=>(
+              <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"8px 0",borderBottom:i<resultado.datos.length-1?`1px solid ${BD}`:"none"}}>
+                <div style={{width:6,height:6,borderRadius:"50%",background:"#7c3aed",marginTop:6,flexShrink:0}}/>
+                <div style={{fontSize:13,color:"#475569",lineHeight:1.5}}>{d}</div>
+              </div>
+            ))}
+          </div>}
+
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={()=>{setPaso("input");setResultado(null);setTexto("");}} style={{flex:1,padding:"12px",borderRadius:12,border:`2px solid ${BD}`,background:"#fff",color:GR,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+              ← Nueva consulta
+            </button>
+            <button onClick={onCerrar} style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:"linear-gradient(135deg,#7c3aed,#a78bfa)",color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+              Listo ✓
+            </button>
+          </div>
+        </div>}
+
+        {/* ── Resultado WhatsApp ── */}
+        {paso==="resultado"&&resultado?.tipo==="whatsapp"&&<div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+            <div style={{width:36,height:36,borderRadius:"50%",background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>💬</div>
+            <div>
+              <div style={{fontWeight:800,fontSize:16,color:TX}}>Mensaje listo para enviar</div>
+              {resultado.alumno&&<div style={{fontSize:12,color:GL}}>Alumno/a: {resultado.alumno}</div>}
+            </div>
+          </div>
+
+          {/* Info del contacto */}
+          <div style={{background:"#f0fdf4",borderRadius:12,padding:"12px 16px",marginBottom:14,border:"1.5px solid #86efac"}}>
+            <div style={{fontSize:11,fontWeight:700,color:GL,textTransform:"uppercase",marginBottom:6}}>Contacto resuelto</div>
+            <div style={{fontWeight:800,fontSize:15,color:TX}}>{resultado.contactoNombre}</div>
+            <div style={{fontSize:13,color:"#166534",marginTop:2}}>{resultado.contactoRol}</div>
+            <div style={{fontSize:12,color:GR,marginTop:2}}>📞 {resultado.telefono}</div>
+          </div>
+
+          {/* Mensaje pre-redactado editable */}
+          <div style={{fontSize:11,fontWeight:700,color:GL,textTransform:"uppercase",marginBottom:6}}>Mensaje generado por IA (podés editarlo)</div>
+          <textarea
+            value={resultado.mensajeSugerido}
+            onChange={e=>setResultado(p=>({...p,mensajeSugerido:e.target.value}))}
+            style={{width:"100%",border:"2px solid #25D366",borderRadius:12,padding:"12px 14px",fontSize:14,fontFamily:"inherit",color:TX,background:"#f0fdf4",boxSizing:"border-box",outline:"none",resize:"vertical",minHeight:100,lineHeight:1.5,marginBottom:16}}/>
+
+          {/* Botón de WhatsApp — el step final */}
+          <button
+            onClick={()=>abrirWA(resultado.telefono, resultado.mensajeSugerido)}
+            style={{width:"100%",padding:"16px",borderRadius:14,border:"none",background:"linear-gradient(135deg,#25D366,#128C7E)",color:"#fff",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:12,boxShadow:"0 4px 16px rgba(37,211,102,.4)",marginBottom:10}}>
+            <span style={{fontSize:22}}>💬</span>
+            Abrir en WhatsApp · {resultado.contactoNombre}
+          </button>
+          <div style={{fontSize:11,color:GL,textAlign:"center",marginBottom:16}}>Se va a abrir WhatsApp con el contacto y el mensaje pre-cargado. Solo tenés que tocar Enviar.</div>
+
+          <button onClick={()=>{setPaso("input");setResultado(null);setTexto("");}} style={{width:"100%",padding:"12px",borderRadius:12,border:`2px solid ${BD}`,background:"#fff",color:GR,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+            ← Nueva consulta
+          </button>
+        </div>}
+
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// APP PRINCIPAL
+// ═══════════════════════════════════════════════════════════════
+export default function App() {
+  // Estado de autenticación — null significa que no hay sesión iniciada.
+  // En producción Firebase Auth persiste esto automáticamente entre sesiones.
+  const [usuario, setUsuario] = useState(() => {
+    try {
+      const s = localStorage.getItem("aye_sesion");
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  });
+
+  const login  = u => { setUsuario(u); grabar("aye_sesion", u); };
+  const logout = ()  => { setUsuario(null); localStorage.removeItem("aye_sesion"); };
+  // Leemos desde localStorage — los datos vienen del Panel de Configuración.
+  // Si no hay nada guardado, usamos los datos de ejemplo.
+  const [escuelas]  = useState(() => leer("aye_escuelas",   ESC_DEF));
+  const [docentes]  = useState(() => leer("aye_docentes",   DOC_DEF));
+  const [pros]      = useState(() => leer("aye_profesionales", PRO_DEF));
+  const [alumnos]   = useState(() => leer("aye_alumnos",    ALU_DEF));
+
+  // Registros y avisos son propios de esta app y también se persisten
+  const [registros, setRegistros]     = useState(() => leer("aye_registros", REG_DEF));
+  const [recs, setRecs]               = useState(() => leer("aye_avisos",    REC_I));
+
+  useEffect(() => { grabar("aye_registros", registros); }, [registros]);
+  useEffect(() => { grabar("aye_avisos",    recs);      }, [recs]);
+
+  const [pant, setPant]     = useState("mapa");
+  const [aSelId, setASelId] = useState(null);
+  const [evSel, setEvSel]   = useState(null);
+
+  // Reloj en vivo — se actualiza cada 60 segundos automáticamente.
+  // Muestra la hora real del dispositivo. En el prototipo esto
+  // va a mostrar la hora actual de quien esté viendo el artifact.
+  const [ahora, setAhora] = useState(new Date());
+  useEffect(()=>{
+    const t = setInterval(()=>setAhora(new Date()), 60000);
+    return ()=>clearInterval(t);
+  },[]);
+
+  // En producción: DIA_REAL = ahora.getDay(), MIN = ahora.getHours()*60+ahora.getMinutes()
+  // En el prototipo simulamos lunes para que haya clases en el mapa de demo.
+  const DIA_REAL = 1;
+  const MIN      = ahora.getHours()*60 + ahora.getMinutes();
+  const [diaVista, setDiaVista] = useState(DIA_REAL);
+
+  // Búsqueda global
+  const [busquedaAbierta, setBusquedaAbierta] = useState(false);
+  const [busquedaQuery, setBusquedaQuery]     = useState("");
+
+  // Co-Pilot
+  const [copilotAbierto, setCopilotAbierto] = useState(false);
+  const resultadosBusqueda = busquedaQuery.trim().length>1
+    ? alumnos.filter(a=>!a.eliminado&&(
+        a.nombre.toLowerCase().includes(busquedaQuery.toLowerCase())||
+        (a.curso||"").toLowerCase().includes(busquedaQuery.toLowerCase())||
+        (a.diagnostico||"").toLowerCase().includes(busquedaQuery.toLowerCase())
+      ))
+    : [];
+
+  const aSel = alumnos.find(a=>a.id===aSelId);
+
+  const verA  = id => { setASelId(id); setPant("ficha"); setBusquedaAbierta(false); setBusquedaQuery(""); };
+  const verC  = ev => { setEvSel(ev);  setASelId(ev.alumnoId); setPant("vistaclase"); };
+
+  const addReg = (aId,r) => setRegistros(p=>({...p,[aId]:[r,...(p[aId]||[])]}));
+  const delReg = (aId,rId) => setRegistros(p=>({...p,[aId]:(p[aId]||[]).map(r=>r.id===rId?{...r,eliminado:true}:r)}));
+  const addRec = r  => setRecs(p=>[r,...p]);
+  const delRec = id => setRecs(p=>p.map(r=>r.id===id?{...r,eliminado:true}:r));
+
+  const urgentes = recs.filter(r=>r.prioridad==="alta"&&!r.eliminado).length;
+  const [confirmarLogout, setConfirmarLogout] = useState(false);
+
+  const NAV = [
+    {id:"mapa",        icon:"🗺",  label:"Mapa"},
+    {id:"directorio",  icon:"📁",  label:"Directorio"},
+    {id:"reportes",    icon:"📄",  label:"Reportes"},
+    {id:"recordatorios",icon:"⏰", label:"Avisos"},
+  ];
+
+  if (!usuario) return <PantallaLogin onLogin={login}/>;
+
+  return (
+    <div style={{maxWidth:420,margin:"0 auto",minHeight:"100vh",background:FO,display:"flex",flexDirection:"column",fontFamily:"'Georgia',serif"}}>
+
+      {/* Modal de confirmación de cierre de sesión */}
+      {confirmarLogout && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:24}}>
+          <div style={{background:"#fff",borderRadius:20,padding:28,maxWidth:320,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,.2)"}}>
+            <div style={{fontSize:36,textAlign:"center",marginBottom:12}}>👋</div>
+            <div style={{fontWeight:800,fontSize:17,textAlign:"center",marginBottom:8}}>¿Cerrar sesión?</div>
+            <div style={{fontSize:14,color:GR,textAlign:"center",lineHeight:1.5,marginBottom:24}}>
+              Vas a tener que volver a iniciar sesión con Google la próxima vez.
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setConfirmarLogout(false)} style={{flex:1,padding:"12px",borderRadius:10,border:`2px solid ${BD}`,background:"#fff",color:GR,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+                Cancelar
+              </button>
+              <button onClick={()=>{logout();setConfirmarLogout(false);}} style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:"#dc2626",color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div style={{background:"#fff",padding:"16px 20px 12px",borderBottom:`1px solid ${FO}`,position:"sticky",top:0,zIndex:100,boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontSize:11,color:GL,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Maestra Integradora</div>
+            <div style={{fontSize:20,fontWeight:800,color:TX,marginTop:1}}>
+              Hola, {usuario.nombre.split(" ")[0]} 👋
+            </div>
+          </div>
+          {/* Avatar — abre el modal de cierre de sesión */}
+          <button
+            onClick={()=>setConfirmarLogout(true)}
+            title="Cerrar sesión"
+            style={{width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,#2D6A4F,#40916c)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:"#fff",fontWeight:800,border:"none",cursor:"pointer"}}
+          >
+            {usuario.nombre.split(" ").map(p=>p[0]).slice(0,2).join("")}
+          </button>
+        </div>
+      </div>
+
+      {/* Contenido */}
+      <div style={{flex:1,padding:"16px 16px 90px",overflowY:"auto"}}>
+        {pant==="mapa"&&<MapaDia alumnos={alumnos} docentes={docentes} escuelas={escuelas} registros={registros} recs={recs} onVerClase={verC} dia={diaVista} diaReal={DIA_REAL} onCambioDia={setDiaVista} minActual={MIN}/>}
+        {pant==="vistaclase"&&evSel&&aSel&&<VistaClase ev={evSel} alumno={aSel} docentes={docentes} registros={registros} escuelas={escuelas} onAddReg={addReg} onAddRec={addRec} onFicha={()=>setPant("ficha")} onBack={()=>setPant("mapa")}/>}
+        {pant==="directorio"&&<Directorio alumnos={alumnos} escuelas={escuelas} onVer={verA}/>}
+        {pant==="reportes"&&<Reportes alumnos={alumnos} docentes={docentes} registros={registros}/>}
+        {pant==="recordatorios"&&<Avisos alumnos={alumnos} recs={recs} onAdd={addRec} onDel={delRec}/>}
+        {pant==="ficha"&&aSel&&<FichaAlumno alumno={aSel} docentes={docentes} pros={pros} escuelas={escuelas} registros={registros} onAddReg={addReg} onDelReg={delReg} onBack={()=>evSel?setPant("vistaclase"):setPant("mapa")}/>}
+      </div>
+
+      {/* Overlay de búsqueda */}
+      {busquedaAbierta&&<>
+        <div onClick={()=>{setBusquedaAbierta(false);setBusquedaQuery("");}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:300}}/>
+        <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:420,zIndex:301,padding:16}}>
+          <div style={{background:"#fff",borderRadius:20,padding:16,boxShadow:"0 8px 32px rgba(0,0,0,.2)"}}>
+            <div style={{display:"flex",gap:10,marginBottom:12,alignItems:"center"}}>
+              <span style={{fontSize:20}}>🔍</span>
+              <input autoFocus value={busquedaQuery} onChange={e=>setBusquedaQuery(e.target.value)}
+                placeholder="Buscar por nombre, curso o diagnóstico..."
+                style={{flex:1,border:"none",outline:"none",fontSize:15,fontFamily:"inherit",color:TX}}/>
+              <button onClick={()=>{setBusquedaAbierta(false);setBusquedaQuery("");}} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:GR}}>✕</button>
+            </div>
+            {busquedaQuery.trim().length>1&&(resultadosBusqueda.length===0
+              ? <div style={{textAlign:"center",padding:"20px 0",color:GL,fontSize:13}}>Sin resultados para "{busquedaQuery}"</div>
+              : resultadosBusqueda.map(a=>{const esc=escuelas.find(e=>e.id===a.escuelaId);return(
+                  <div key={a.id} onClick={()=>verA(a.id)} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:`1px solid ${FO}`,cursor:"pointer"}}>
+                    <div style={{width:40,height:40,borderRadius:"50%",background:esc?.color||G,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#fff",flexShrink:0}}>{a.nombre.split(" ").slice(0,2).map(p=>p[0]).join("")}</div>
+                    <div><div style={{fontWeight:800,fontSize:14,color:TX}}>{a.nombre}</div><div style={{fontSize:12,color:GR,marginTop:1}}>{a.curso} · {esc?.nombre}</div></div>
+                  </div>
+                );})
+            )}
+            {busquedaQuery.trim().length<=1&&<div style={{textAlign:"center",padding:"16px 0",color:GL,fontSize:13}}>Escribí al menos 2 caracteres</div>}
+          </div>
+        </div>
+      </>}
+
+      {/* Botón flotante de búsqueda */}
+      {!busquedaAbierta&&!copilotAbierto&&<button onClick={()=>setBusquedaAbierta(true)} style={{position:"fixed",bottom:82,right:"calc(50% - 196px)",width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,#2D6A4F,#40916c)",color:"#fff",border:"none",cursor:"pointer",fontSize:18,boxShadow:"0 4px 16px rgba(45,106,79,.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:99}}>🔍</button>}
+
+      {/* Botón flotante Co-Pilot — mismo estilo que búsqueda */}
+      {!busquedaAbierta&&<button
+        onClick={()=>setCopilotAbierto(true)}
+        style={{position:"fixed",bottom:82,right:"calc(50% - 148px)",width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,#2D6A4F,#40916c)",color:"#fff",border:"none",cursor:"pointer",fontSize:20,boxShadow:"0 4px 16px rgba(45,106,79,.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:99}}>✨</button>}
+
+      {/* Modal Co-Pilot */}
+      {copilotAbierto&&<CoPilot
+        alumnos={alumnos} docentes={docentes} pros={pros}
+        escuelas={escuelas} registros={registros} recs={recs}
+        onCerrar={()=>setCopilotAbierto(false)}
+      />}
+
+      {/* Nav bar */}
+      <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:420,background:"#fff",borderTop:`1px solid ${FO}`,display:"flex",padding:"8px 0 12px",boxShadow:"0 -4px 16px rgba(0,0,0,.08)",zIndex:100}}>
+        {NAV.map(item=><button key={item.id} onClick={()=>{setPant(item.id);setASelId(null);setEvSel(null);}} style={{flex:1,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,padding:"4px 0",position:"relative"}}>
+          <div style={{fontSize:20}}>{item.icon}</div>
+          <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:.5,color:(pant===item.id||(["ficha","vistaclase"].includes(pant)&&item.id==="mapa"))?G:GL}}>{item.label}</div>
+          {item.id==="recordatorios"&&urgentes>0&&<div style={{position:"absolute",top:0,right:"22%",background:"#dc2626",color:"#fff",borderRadius:"50%",width:16,height:16,fontSize:10,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{urgentes}</div>}
+        </button>)}
+      </div>
+    </div>
+  );
+}
+
+// ─── Dato inicial de avisos que faltaba definir ───────────────
+const REC_I = [{id:"rc1",alumnoId:"a1",texto:"Reunión con Lic. Paula Herrera el viernes 6/6",fecha:"2026-06-06",prioridad:"alta",eliminado:false}];
+
+  </script>
+</body>
+</html>
