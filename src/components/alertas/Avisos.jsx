@@ -11,9 +11,10 @@ export default function Avisos({ alumnos, recs, onAdd, onDel }) {
   const [pri, setPri] = useState("media");
   const [conf, setConf] = useState(null);
 
-  const act = recs.filter(r => !r.eliminado).sort((a, b) => {
+  const act = (recs || []).filter(r => !r.eliminado).sort((a, b) => {
     const p = { alta: 0, media: 1, baja: 2 };
-    return p[a.prioridad] !== p[b.prioridad] ? p[a.prioridad] - p[b.prioridad] : a.fecha.localeCompare(b.fecha);
+    const pa = p[a.prioridad] ?? 1, pb = p[b.prioridad] ?? 1;
+    return pa !== pb ? pa - pb : (a.fecha || "").localeCompare(b.fecha || "");
   });
   const pc = { alta: "#dc2626", media: "#f59e0b", baja: G };
   const pb = { alta: "#fef2f2", media: "#fffbeb", baja: "#f0fdf4" };
