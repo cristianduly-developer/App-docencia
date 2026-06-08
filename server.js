@@ -9,6 +9,17 @@ const { OAuth2Client }  = require('google-auth-library');
 
 const app    = express();
 const PORT   = process.env.PORT || 3000;
+
+// ── Rate limiting simple en memoria ──────────────────────────
+const _rl = new Map();
+function rateLimit(key, maxReqs, windowMs) {
+  const now = Date.now();
+  const entry = _rl.get(key) || { count: 0, reset: now + windowMs };
+  if (now > entry.reset) { entry.count = 0; entry.reset = now + windowMs; }
+  entry.count++;
+  _rl.set(key, entry);
+  return entry.count > maxReqs;
+}
 const GOOGLE_CLIENT_ID = "117583093488-94tk32l3502mj4c3vff7fci9oclcvvhn.apps.googleusercontent.com";
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
@@ -337,6 +348,9 @@ const MAPEO = {
 // Auth: verificación server-side del JWT de Google
 // ══════════════════════════════════════════════════════════════
 app.post('/api/verify-token', async (req, res) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.ip || 'unknown';
+  if (rateLimit(`login:${ip}`, 10, 60_000)) // máx 10 intentos por minuto por IP
+    return res.status(429).json({ error: 'Demasiados intentos. Esperá un minuto.' });
   try {
     const { credential } = req.body;
     if (!credential) return res.status(400).json({ error: 'credential requerido' });
@@ -396,7 +410,9 @@ app.post('/api/verify-token', async (req, res) => {
       }
     }
 
-    const plan = esAdmin ? 'premium' : (acceso.plan || 'basico');
+    const planRaw = esAdmin ? 'premium' : (acceso.plan || 'basico');
+    // 'sincargo' = premium sin costo — mismos permisos que premium
+    const plan = planRaw === 'sincargo' ? 'premium' : planRaw;
     const sessionToken = crearToken(email, nombreDocente, payload.picture, orgId, plan);
     res.json({
       ok: true,
@@ -439,6 +455,9 @@ MARCO FILOSÓFICO:
 TONO: Profesional, empático, técnico-pedagógico impecable. El texto debe poder copiarse directamente en un informe formal para un Inspector o Director.`;
 
 app.post('/api/claude', requireAuth, async (req, res) => {
+  const emailKey = req.session?.email || req.ip;
+  if (rateLimit(`claude:${emailKey}`, 20, 60_000)) // máx 20 llamadas por minuto por usuario
+    return res.status(429).json({ error: 'Límite de consultas alcanzado. Esperá un momento.' });
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key no configurada' });
   try {
@@ -476,7 +495,7 @@ app.post('/api/claude', requireAuth, async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 // Supabase DB endpoints — GET / POST / DELETE genéricos
 // ══════════════════════════════════════════════════════════════
-const TABLAS = ['escuelas','docentes','profesionales','alumnos','registros','avisos','documentos','usuarios'];
+const TABLAS = ['escuelas','docentes','profesionales','alumnos','registros','avisos','documentos'];
 
 TABLAS.forEach(tabla => {
 
