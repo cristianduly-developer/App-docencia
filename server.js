@@ -56,7 +56,10 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '1mb' })); // suficiente para todos los casos reales
-app.use(express.static(path.join(__dirname, 'dist')));
+// Static files served by Vercel CDN (outputDirectory: dist) — no Express static needed in production
+if (process.env.NODE_ENV !== 'production') {
+  app.use(require('express').static(require('path').join(__dirname, 'dist')));
+}
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -639,7 +642,10 @@ app.get('/api/health', async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 // Páginas
 // ══════════════════════════════════════════════════════════════
-app.get('*',       (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
+// Fallback solo para dev local (en Vercel lo maneja el CDN)
+if (process.env.NODE_ENV !== 'production') {
+  app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
+}
 
 app.listen(PORT, () => {
   console.log(`Aye app corriendo en http://localhost:${PORT}`);
