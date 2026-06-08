@@ -340,7 +340,6 @@ app.post('/api/verify-token', async (req, res) => {
   try {
     const { credential } = req.body;
     if (!credential) return res.status(400).json({ error: 'credential requerido' });
-    console.log('[verify-token] credential recibido, longitud:', credential?.length);
 
     let ticket;
     try {
@@ -354,7 +353,6 @@ app.post('/api/verify-token', async (req, res) => {
     }
     const payload = ticket.getPayload();
     const email = (payload.email || '').toLowerCase().trim();
-    console.log('[verify-token] email verificado:', email);
 
     // Admins globales: acceso sin restricciones a todos los datos
     const esAdmin = ADMINS.includes(email);
@@ -370,10 +368,8 @@ app.post('/api/verify-token', async (req, res) => {
       // Verificar acceso en el SaaS central
       try {
         const resultado = await verificarAccesoCentral(email, 'docentes');
-        console.log('[verify-token] RPC resultado raw:', JSON.stringify(resultado));
         // La RPC devuelve array — tomamos el primer elemento
         acceso = Array.isArray(resultado) ? (resultado[0] || null) : resultado;
-        console.log('[verify-token] acceso procesado:', JSON.stringify(acceso));
       } catch (e) {
         console.error('[verify-token] SaaS central error:', e.message);
         return res.status(503).json({ error: 'No se pudo verificar el acceso. Intentá de nuevo.' });
