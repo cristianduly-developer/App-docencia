@@ -274,7 +274,7 @@ ${firmaHTML(firmas)}
 // ── Vista por alumno ──────────────────────────────────────────
 const POR_PAG = 30;
 
-function VistaAlumno({ alumno, escuelas, docentes, alumnos }) {
+function VistaAlumno({ alumno, escuelas, docentes, alumnos, onVerAlumno }) {
   const escuela = escuelas.find(e => e.id === alumno.escuelaId);
   const ec = escuela?.color || G;
   const [tab, setTab] = useState("historial");
@@ -333,14 +333,20 @@ function VistaAlumno({ alumno, escuelas, docentes, alumnos }) {
     <div>
       {/* Mini ficha */}
       <div style={{ background: `linear-gradient(135deg,${ec},${ec}99)`, borderRadius: 16, padding: "14px 16px", color: "#fff", marginBottom: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 17 }}>{alumno.nombre}</div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,.85)", marginTop: 2 }}>{alumno.curso} · {escuela?.nombre}</div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,.7)", marginTop: 2 }}>{alumno.diagnostico} · {regsAlu.length} registros</div>
-          </div>
+        <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 2 }}>{alumno.nombre}</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,.85)", marginBottom: 2 }}>{alumno.curso} · {escuela?.nombre}</div>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,.7)", marginBottom: 12 }}>{alumno.diagnostico} · {regsAlu.length} registros</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {onVerAlumno && (
+            <button onClick={() => onVerAlumno(alumno)}
+              style={{ background: "rgba(255,255,255,.2)", border: "none", borderRadius: 10, padding: "8px 12px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+              👤 Ver ficha
+            </button>
+          )}
           <button onClick={() => imprimirFicha(alumno, escuela, docentes)}
-            style={{ background: "rgba(255,255,255,.2)", border: "none", borderRadius: 10, padding: "8px 12px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>📄 Ficha</button>
+            style={{ background: "rgba(255,255,255,.2)", border: "none", borderRadius: 10, padding: "8px 12px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+            📄 Imprimir ficha
+          </button>
         </div>
       </div>
 
@@ -474,42 +480,26 @@ function VistaEscuela({ alumnos, escuelas, docentes }) {
 
 // ── Reportes principal ────────────────────────────────────────
 export default function Reportes({ alumnos, docentes, pros, escuelas, registros, recs, onVerAlumno }) {
-  const [modo, setModo] = useState("alumno");
   const [aluId, setAluId] = useState("");
   const alumno = aluId ? alumnos.find(a => String(a.id) === String(aluId) && !a.eliminado) : null;
 
-  const MODOS = [
-    { id: "alumno",  l: "👤 Por alumno"  },
-    { id: "fecha",   l: "📅 Por fecha"   },
-    { id: "escuela", l: "🏫 Por escuela" },
-  ];
-
   return (
     <div style={{ paddingBottom: 80 }}>
-      <div style={{ background: "linear-gradient(135deg,#1a202c,#2d3748)", padding: "16px 20px 16px", color: "#fff" }}>
-        <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 12 }}>📊 Reportes</div>
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
-          {MODOS.map(m => (
-            <button key={m.id} onClick={() => setModo(m.id)} style={{ padding: "8px 14px", borderRadius: 20, border: "2px solid", whiteSpace: "nowrap", fontFamily: "inherit", fontWeight: 700, fontSize: 13, cursor: "pointer", borderColor: modo === m.id ? "#fff" : "rgba(255,255,255,.3)", background: modo === m.id ? "#fff" : "transparent", color: modo === m.id ? "#1a202c" : "#fff" }}>{m.l}</button>
-          ))}
-        </div>
+      <div style={{ background: "linear-gradient(135deg,#1a202c,#2d3748)", padding: "16px 20px", color: "#fff" }}>
+        <div style={{ fontWeight: 800, fontSize: 18 }}>📊 Reportes</div>
       </div>
 
       <div style={{ padding: 16 }}>
-        {modo === "fecha" && <VistaFecha alumnos={alumnos} escuelas={escuelas} docentes={docentes} />}
-        {modo === "escuela" && <VistaEscuela alumnos={alumnos} escuelas={escuelas} docentes={docentes} />}
-        {modo === "alumno" && <>
-          <select value={aluId} onChange={e => setAluId(e.target.value)} style={{ width: "100%", border: `1.5px solid ${BD}`, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontFamily: "inherit", background: "#fff", color: aluId ? TX : GL, boxSizing: "border-box", marginBottom: 16 }}>
-            <option value="">Seleccionar estudiante...</option>
-            {alumnos.filter(a => !a.eliminado && a.nombre).map(a => {
-              const e = escuelas.find(x => x.id === a.escuelaId);
-              return <option key={a.id} value={String(a.id)}>{a.nombre}{e ? ` — ${e.nombre}` : ""}</option>;
-            })}
-          </select>
-          {!alumno
-            ? <Card sx={{ textAlign: "center", padding: 40 }}><div style={{ fontSize: 40, marginBottom: 12 }}>📊</div><div style={{ fontWeight: 700, fontSize: 16, color: TX, marginBottom: 6 }}>Seleccioná un alumno</div><div style={{ fontSize: 13, color: GR }}>Para ver el historial de registros y generar informes pedagógicos.</div></Card>
-            : <VistaAlumno alumno={alumno} escuelas={escuelas} docentes={docentes} alumnos={alumnos} />}
-        </>}
+        <select value={aluId} onChange={e => setAluId(e.target.value)} style={{ width: "100%", border: `1.5px solid ${BD}`, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontFamily: "inherit", background: "#fff", color: aluId ? TX : GL, boxSizing: "border-box", marginBottom: 16 }}>
+          <option value="">Seleccionar estudiante...</option>
+          {alumnos.filter(a => !a.eliminado && a.nombre).map(a => {
+            const e = escuelas.find(x => x.id === a.escuelaId);
+            return <option key={a.id} value={String(a.id)}>{a.nombre}{e ? ` — ${e.nombre}` : ""}</option>;
+          })}
+        </select>
+        {!alumno
+          ? <Card sx={{ textAlign: "center", padding: 40 }}><div style={{ fontSize: 40, marginBottom: 12 }}>📊</div><div style={{ fontWeight: 700, fontSize: 16, color: TX, marginBottom: 6 }}>Seleccioná un alumno</div><div style={{ fontSize: 13, color: GR }}>Para ver el historial de registros y generar informes pedagógicos.</div></Card>
+          : <VistaAlumno alumno={alumno} escuelas={escuelas} docentes={docentes} alumnos={alumnos} onVerAlumno={onVerAlumno} />}
       </div>
     </div>
   );

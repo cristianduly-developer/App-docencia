@@ -639,10 +639,7 @@ app.get('/api/health', async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 // Páginas
 // ══════════════════════════════════════════════════════════════
-app.get('/config', (req, res) => res.sendFile(path.join(__dirname, 'public', 'config.html')));
-app.get('/docs',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'docs.html')));
-app.get('/',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('*',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('*',       (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
 
 app.listen(PORT, () => {
   console.log(`Aye app corriendo en http://localhost:${PORT}`);
