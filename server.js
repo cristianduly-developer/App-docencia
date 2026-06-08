@@ -56,7 +56,7 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '1mb' })); // suficiente para todos los casos reales
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'dist')));
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -504,10 +504,15 @@ TABLAS.forEach(tabla => {
     try {
       let query = supabase.from(tabla).select('*');
       if (req.orgId) query = query.eq('org_id', req.orgId);
+      // Excluir registros borrados — incluye null (registros sin el campo seteado)
+      query = query.or('eliminado.eq.false,eliminado.is.null');
       // Filtros opcionales por query params
       if (req.query.alumno_id) query = query.eq('alumno_id', req.query.alumno_id);
       if (req.query.desde)     query = query.gte('fecha', req.query.desde);
       if (req.query.hasta)     query = query.lte('fecha', req.query.hasta);
+      // Límite de seguridad por tabla — evita corte silencioso de Supabase (default 1000)
+      const LIMITES = { registros: 5000, avisos: 1000, documentos: 500 };
+      query = query.limit(LIMITES[tabla] || 2000);
       const { data, error } = await query;
       if (error) throw error;
       const m = MAPEO[tabla];
