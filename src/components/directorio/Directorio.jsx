@@ -5,17 +5,81 @@ import { Card, Btn, Fld, Sel, SecT, WA, Mail, Confirm } from '../ui';
 
 const COLORES = ["#2D6A4F","#1d4ed8","#7c3aed","#dc2626","#d97706","#0891b2","#be185d","#15803d"];
 
+// ── Modal cierre de escuela ───────────────────────────────────
+function ModalCierreEscuela({ escuela, alusAct, docsEsc, onArchivarTodo, onCerrarCiclo, onClose }) {
+  const ec = escuela.color || G;
+  const cicloActual = String(new Date().getFullYear());
+  return (
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20 }}>
+      <div style={{ background:"#fff",borderRadius:20,padding:24,maxWidth:360,width:"100%" }}>
+        <div style={{ fontSize:22,textAlign:"center",marginBottom:8 }}>🏫</div>
+        <div style={{ fontWeight:800,fontSize:16,textAlign:"center",marginBottom:4 }}>{escuela.nombre}</div>
+        <div style={{ fontSize:13,color:GR,textAlign:"center",marginBottom:20 }}>
+          {alusAct.length} alumnos activos · {docsEsc.length} docentes
+        </div>
+
+        {/* Opción 1: cerrar ciclo */}
+        <button onClick={onCerrarCiclo} style={{ width:"100%",background:"#fffbeb",border:"2px solid #f59e0b",borderRadius:14,padding:14,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:10 }}>
+          <div style={{ fontWeight:800,fontSize:14,color:"#92400e",marginBottom:4 }}>🗓 Cerrar ciclo {cicloActual}</div>
+          <div style={{ fontSize:12,color:"#b45309",lineHeight:1.5 }}>
+            La escuela <strong>sigue activa</strong> el año que viene.<br/>
+            Se archivan los alumnos y docentes del ciclo actual.
+          </div>
+        </button>
+
+        {/* Opción 2: archivar todo */}
+        <button onClick={onArchivarTodo} style={{ width:"100%",background:"#fef2f2",border:"2px solid #fca5a5",borderRadius:14,padding:14,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:16 }}>
+          <div style={{ fontWeight:800,fontSize:14,color:"#991b1b",marginBottom:4 }}>📦 Archivar escuela completa</div>
+          <div style={{ fontSize:12,color:"#b91c1c",lineHeight:1.5 }}>
+            La escuela <strong>se archiva</strong> junto con todos sus<br/>
+            docentes y alumnos. No aparece más activa.
+          </div>
+        </button>
+
+        <button onClick={onClose} style={{ width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${BD}`,background:"#fff",color:GR,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit" }}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Ficha Escuela ─────────────────────────────────────────────
-function FichaEscuela({ escuela, alumnos, docentes, onEditar, onToggleActivo, onDelete, onBack }) {
+function FichaEscuela({ escuela, alumnos, docentes, onEditar, onToggleActivo, onArchivarAlumnos, onDelete, onBack }) {
   const [conf, setConf] = useState(null);
+  const [modalCierre, setModalCierre] = useState(false);
   const ec = escuela.color || G;
   const alusAct = alumnos.filter(a => a.escuelaId === escuela.id && !a.eliminado && a.activo !== false);
   const docsEsc = docentes.filter(d => d.escuelaId === escuela.id && !d.eliminado);
   const inact = escuela.activo === false;
+  const cicloActual = String(new Date().getFullYear());
+
+  const handleCerrarCiclo = () => {
+    setModalCierre(false);
+    onArchivarAlumnos(escuela.id, cicloActual, true); // archiva alumnos + docentes, escuela sigue activa
+    onBack();
+  };
+
+  const handleArchivarTodo = () => {
+    setModalCierre(false);
+    onArchivarAlumnos(escuela.id, cicloActual, true); // archiva alumnos + docentes
+    onToggleActivo(escuela.id);                        // archiva la escuela
+    onBack();
+  };
 
   return (
     <div>
       {conf && <Confirm msg={conf.msg} onOk={conf.ok} onNo={() => setConf(null)} />}
+      {modalCierre && (
+        <ModalCierreEscuela
+          escuela={escuela}
+          alusAct={alusAct}
+          docsEsc={docsEsc}
+          onCerrarCiclo={handleCerrarCiclo}
+          onArchivarTodo={handleArchivarTodo}
+          onClose={() => setModalCierre(false)}
+        />
+      )}
       <button onClick={onBack} style={{ background:"none",border:"none",cursor:"pointer",color:ec,fontWeight:700,fontSize:14,padding:0,marginBottom:16,fontFamily:"inherit" }}>← Volver</button>
 
       {/* Header */}
@@ -29,10 +93,16 @@ function FichaEscuela({ escuela, alumnos, docentes, onEditar, onToggleActivo, on
       {/* Acciones */}
       <div style={{ display:"flex",gap:8,marginBottom:16 }}>
         <button onClick={() => onEditar(escuela)} style={{ flex:1,background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"10px 6px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:13,color:TX }}>✏️ Editar</button>
-        <button onClick={() => setConf({ msg:`¿${inact?"Reactivar":"Archivar"} ${escuela.nombre}? Sus datos se conservan.`, ok:()=>{ onToggleActivo(escuela.id); setConf(null); onBack(); } })}
-          style={{ flex:1,background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"10px 6px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:13,color:inact?G:GR }}>
-          {inact?"▶ Reactivar":"⏸ Archivar"}
-        </button>
+        {inact
+          ? <button onClick={() => setConf({ msg:`¿Reactivar ${escuela.nombre}?`, ok:()=>{ onToggleActivo(escuela.id); setConf(null); onBack(); } })}
+              style={{ flex:1,background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"10px 6px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:13,color:G }}>
+              ▶ Reactivar
+            </button>
+          : <button onClick={() => setModalCierre(true)}
+              style={{ flex:1,background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"10px 6px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:13,color:GR }}>
+              🗓 Cerrar / Archivar
+            </button>
+        }
         <button onClick={() => setConf({ msg:`¿Eliminar ${escuela.nombre}? Esta acción no se puede deshacer.`, ok:()=>{ onDelete(escuela.id); setConf(null); onBack(); } })}
           style={{ flex:1,background:"#fff",border:"1.5px solid #fca5a5",borderRadius:12,padding:"10px 6px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:13,color:"#dc2626" }}>
           🗑 Eliminar
@@ -181,8 +251,8 @@ function FormEscuela({ inicial, escuelas, onSave, onCancel }) {
 }
 
 // ── SecEscuelas ───────────────────────────────────────────────
-function SecEscuelas({ escuelas, alumnos, docentes, onSave, onDelete, onToggleActivo }) {
-  const [form, setForm] = useState(null);   // null | escuela a editar | "nueva"
+function SecEscuelas({ escuelas, alumnos, docentes, onSave, onDelete, onToggleActivo, onArchivarAlumnos }) {
+  const [form, setForm] = useState(null);
   const [ficha, setFicha] = useState(null);
   const activas = escuelas.filter(e=>!e.eliminado);
 
@@ -202,6 +272,7 @@ function SecEscuelas({ escuelas, alumnos, docentes, onSave, onDelete, onToggleAc
       docentes={docentes}
       onEditar={e=>setForm(e)}
       onToggleActivo={onToggleActivo}
+      onArchivarAlumnos={onArchivarAlumnos}
       onDelete={onDelete}
       onBack={()=>setFicha(null)}
     />
@@ -428,7 +499,7 @@ function SecProfesionales({ pros, onSave, onDelete }) {
 }
 
 // ── Directorio principal ──────────────────────────────────────
-export default function Directorio({ alumnos, escuelas, docentes, pros, onVer, saveEsc, delEsc, saveDoc, savePro, delDoc, delPro, toggleActivoEsc }) {
+export default function Directorio({ alumnos, escuelas, docentes, pros, onVer, saveEsc, delEsc, saveDoc, savePro, delDoc, delPro, toggleActivoEsc, archivarAlumnosEsc }) {
   const [seccion, setSeccion] = useState("escuelas");
   const SECS = [
     { id:"escuelas", icon:"🏫", label:"Escuelas"      },
@@ -449,7 +520,7 @@ export default function Directorio({ alumnos, escuelas, docentes, pros, onVer, s
         </div>
       </div>
       <div style={{ padding:"16px 16px 80px" }}>
-        {seccion==="escuelas" && <SecEscuelas escuelas={escuelas} alumnos={alumnos} docentes={docentes} onSave={saveEsc} onDelete={delEsc} onToggleActivo={toggleActivoEsc} />}
+        {seccion==="escuelas" && <SecEscuelas escuelas={escuelas} alumnos={alumnos} docentes={docentes} onSave={saveEsc} onDelete={delEsc} onToggleActivo={toggleActivoEsc} onArchivarAlumnos={archivarAlumnosEsc} />}
         {seccion==="docentes" && <SecDocentes docentes={docentes} escuelas={escuelas} alumnos={alumnos} onSave={saveDoc} onDelete={delDoc} />}
         {seccion==="pros"     && <SecProfesionales pros={pros} onSave={savePro} onDelete={delPro} />}
       </div>

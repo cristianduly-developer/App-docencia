@@ -1,7 +1,7 @@
 // Service Worker básico para PWA
 // Permite instalar la app en el celular como app nativa
 
-const CACHE_NAME = 'aye-v1780969884623';
+const CACHE_NAME = 'aye-v1780974083759';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
