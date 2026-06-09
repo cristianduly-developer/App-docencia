@@ -254,7 +254,8 @@ function FormEscuela({ inicial, escuelas, onSave, onCancel }) {
 function SecEscuelas({ escuelas, alumnos, docentes, onSave, onDelete, onToggleActivo, onArchivarAlumnos }) {
   const [form, setForm] = useState(null);
   const [ficha, setFicha] = useState(null);
-  const activas = escuelas.filter(e=>!e.eliminado);
+  const [verArch, setVerArch] = useState(false);
+  const activas = escuelas.filter(e => !e.eliminado && (verArch ? e.activo === false : e.activo !== false));
 
   if (form) return (
     <FormEscuela
@@ -280,19 +281,24 @@ function SecEscuelas({ escuelas, alumnos, docentes, onSave, onDelete, onToggleAc
 
   return (
     <div>
-      <button onClick={()=>setForm("nueva")} style={{ width:"100%",padding:12,borderRadius:14,border:`2px dashed ${G}`,background:"#f0fdf4",color:G,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit",marginBottom:12 }}>+ Nueva escuela</button>
+      <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+        <button onClick={()=>setForm("nueva")} style={{ flex:1,padding:12,borderRadius:14,border:`2px dashed ${G}`,background:"#f0fdf4",color:G,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit" }}>+ Nueva escuela</button>
+        <button onClick={()=>setVerArch(v=>!v)} style={{ padding:"12px 14px",borderRadius:14,border:"2px solid",borderColor:verArch?"#94a3b8":BD,background:verArch?"#f1f5f9":"#fff",color:"#94a3b8",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap" }}>
+          {verArch?"✅ Activas":"📦 Archivadas"}
+        </button>
+      </div>
       {activas.length===0
-        ? <Card sx={{ textAlign:"center",padding:32,color:GR }}>Sin escuelas. Agregá la primera.</Card>
+        ? <Card sx={{ textAlign:"center",padding:32,color:GR }}>{verArch?"Sin escuelas archivadas":"Sin escuelas. Agregá la primera."}</Card>
         : activas.map(e=>{
-            const aluCount = alumnos.filter(a=>a.escuelaId===e.id&&!a.eliminado&&a.activo!==false).length;
-            const inact = e.activo===false;
+            const aluCount = alumnos.filter(a=>a.escuelaId===e.id&&!a.eliminado&&(verArch?a.activo===false:a.activo!==false)).length;
             return (
-              <Card key={e.id} onClick={()=>setFicha(e)} sx={{ borderLeft:`4px solid ${inact?"#cbd5e0":e.color||G}`,opacity:inact?.7:1,cursor:"pointer" }}>
+              <Card key={e.id} onClick={()=>setFicha(e)} sx={{ borderLeft:`4px solid ${verArch?"#cbd5e0":e.color||G}`,opacity:verArch?.75:1,cursor:"pointer" }}>
                 <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
                   <div style={{ flex:1 }}>
+                    {verArch && <div style={{ fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",marginBottom:3 }}>📦 Archivada</div>}
                     <div style={{ fontWeight:800,fontSize:16,color:TX }}>{e.nombre}</div>
                     <div style={{ fontSize:12,color:GR,marginTop:2 }}>{e.nivel}{e.direccion?` · ${e.direccion}`:""}</div>
-                    <div style={{ fontSize:12,color:GL,marginTop:2 }}>👤 {aluCount} alumnos{e.director?` · ${e.director}`:""}</div>
+                    <div style={{ fontSize:12,color:GL,marginTop:2 }}>👤 {aluCount} alumnos archivados{e.director?` · ${e.director}`:""}</div>
                   </div>
                   <div style={{ fontSize:22,color:"#cbd5e0",marginLeft:8 }}>›</div>
                 </div>
@@ -367,7 +373,8 @@ function SecDocentes({ docentes, escuelas, alumnos, onSave, onDelete }) {
   const [ficha, setFicha] = useState(null);
   const [busq, setBusq] = useState("");
   const [filEsc, setFilEsc] = useState("");
-  const activos = docentes.filter(d=>!d.eliminado);
+  const [verArch, setVerArch] = useState(false);
+  const activos = docentes.filter(d => !d.eliminado && (verArch ? d.activo === false : d.activo !== false));
   const filtrados = activos.filter(d=>{
     if (filEsc && d.escuelaId!==filEsc) return false;
     if (busq) { const q=busq.toLowerCase(); return d.nombre.toLowerCase().includes(q)||d.materia.toLowerCase().includes(q); }
@@ -408,30 +415,34 @@ function SecDocentes({ docentes, escuelas, alumnos, onSave, onDelete }) {
         + Nuevo docente
       </button>
 
-      {activos.length>0 && <>
+      <div style={{ display:"flex",gap:8,marginBottom:8,alignItems:"center" }}>
         <input value={busq} onChange={e=>setBusq(e.target.value)} placeholder="🔍 Buscar por nombre o materia..."
-          style={{ width:"100%",border:`1.5px solid ${BD}`,borderRadius:10,padding:"9px 14px",fontSize:13,fontFamily:"inherit",boxSizing:"border-box",marginBottom:8 }} />
-        {escuelas.filter(e=>!e.eliminado).length>1 && (
-          <div style={{ display:"flex",gap:6,flexWrap:"wrap",marginBottom:12 }}>
-            <button onClick={()=>setFilEsc("")} style={{ padding:"6px 12px",borderRadius:20,border:"2px solid",fontFamily:"inherit",fontWeight:700,fontSize:12,cursor:"pointer",borderColor:!filEsc?G:BD,background:!filEsc?G:"#fff",color:!filEsc?"#fff":"#475569",whiteSpace:"nowrap" }}>Todas</button>
-            {escuelas.filter(e=>!e.eliminado).map(e=>(
-              <button key={e.id} onClick={()=>setFilEsc(filEsc===e.id?"":e.id)}
-                style={{ padding:"6px 12px",borderRadius:20,border:"2px solid",fontFamily:"inherit",fontWeight:700,fontSize:12,cursor:"pointer",borderColor:filEsc===e.id?(e.color||G):BD,background:filEsc===e.id?(e.color||G):"#fff",color:filEsc===e.id?"#fff":"#475569",whiteSpace:"nowrap" }}>
-                {e.nombre}
-              </button>
-            ))}
-          </div>
-        )}
-      </>}
+          style={{ flex:1,border:`1.5px solid ${BD}`,borderRadius:10,padding:"9px 14px",fontSize:13,fontFamily:"inherit",boxSizing:"border-box" }} />
+        <button onClick={()=>setVerArch(v=>!v)} style={{ padding:"9px 12px",borderRadius:10,border:"2px solid",borderColor:verArch?"#94a3b8":BD,background:verArch?"#f1f5f9":"#fff",color:"#94a3b8",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap" }}>
+          {verArch?"✅ Activos":"📦 Arch."}
+        </button>
+      </div>
+      {!verArch && escuelas.filter(e=>!e.eliminado&&e.activo!==false).length>1 && (
+        <div style={{ display:"flex",gap:6,flexWrap:"wrap",marginBottom:12 }}>
+          <button onClick={()=>setFilEsc("")} style={{ padding:"6px 12px",borderRadius:20,border:"2px solid",fontFamily:"inherit",fontWeight:700,fontSize:12,cursor:"pointer",borderColor:!filEsc?G:BD,background:!filEsc?G:"#fff",color:!filEsc?"#fff":"#475569",whiteSpace:"nowrap" }}>Todas</button>
+          {escuelas.filter(e=>!e.eliminado&&e.activo!==false).map(e=>(
+            <button key={e.id} onClick={()=>setFilEsc(filEsc===e.id?"":e.id)}
+              style={{ padding:"6px 12px",borderRadius:20,border:"2px solid",fontFamily:"inherit",fontWeight:700,fontSize:12,cursor:"pointer",borderColor:filEsc===e.id?(e.color||G):BD,background:filEsc===e.id?(e.color||G):"#fff",color:filEsc===e.id?"#fff":"#475569",whiteSpace:"nowrap" }}>
+              {e.nombre}
+            </button>
+          ))}
+        </div>
+      )}
 
       {filtrados.length===0
-        ? <Card sx={{ textAlign:"center",padding:32,color:GR }}>{activos.length===0?"Sin docentes cargados.":"Sin resultados."}</Card>
+        ? <Card sx={{ textAlign:"center",padding:32,color:GR }}>{verArch?"Sin docentes archivados":activos.length===0?"Sin docentes cargados.":"Sin resultados."}</Card>
         : filtrados.map(d=>{
             const esc = escuelas.find(e=>e.id===d.escuelaId);
             return (
-              <Card key={d.id} onClick={()=>setFicha(d)} sx={{ borderLeft:`4px solid ${esc?.color||G}`,cursor:"pointer" }}>
+              <Card key={d.id} onClick={()=>setFicha(d)} sx={{ borderLeft:`4px solid ${verArch?"#cbd5e0":esc?.color||G}`,opacity:verArch?.75:1,cursor:"pointer" }}>
                 <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
                   <div style={{ flex:1 }}>
+                    {verArch && <div style={{ fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",marginBottom:3 }}>📦 Archivado/a</div>}
                     <div style={{ fontWeight:800,fontSize:15,color:TX }}>{d.materia}</div>
                     <div style={{ fontSize:13,color:GR,marginTop:2 }}>{d.nombre}</div>
                     <div style={{ fontSize:11,color:GL,marginTop:2 }}>{esc?.nombre}{d.telefono?` · ${d.telefono}`:""}</div>
