@@ -108,21 +108,6 @@ export default function MapaDia({ alumnos, docentes, escuelas, registros, recs, 
         </div>
       </div>
 
-      {/* Alertas del día */}
-      {esHoy&&(recs||[]).filter(r=>!r.eliminado&&(!r.fecha||r.fecha===hoy())).length>0&&(
-        <div style={{marginBottom:12}}>
-          {(recs||[]).filter(r=>!r.eliminado&&(!r.fecha||r.fecha===hoy()))
-            .sort((a,b)=>({alta:0,media:1,baja:2})[a.prioridad]-({alta:0,media:1,baja:2})[b.prioridad])
-            .map(r=>{
-              const p={alta:{bg:"#fef2f2",bo:"#fca5a5",tx:"#dc2626",ic:"🔴"},media:{bg:"#fffbeb",bo:"#fcd34d",tx:"#d97706",ic:"🟡"},baja:{bg:"#f0fdf4",bo:"#86efac",tx:"#16a34a",ic:"🟢"}}[r.prioridad]||{bg:"#fffbeb",bo:"#fcd34d",tx:"#d97706",ic:"🟡"};
-              const alu=alumnos.find(a=>a.id===r.alumnoId);
-              return <div key={r.id} style={{background:p.bg,border:`1.5px solid ${p.bo}`,borderRadius:12,padding:"10px 14px",marginBottom:6,display:"flex",alignItems:"flex-start",gap:10}}>
-                <span style={{fontSize:16,flexShrink:0}}>{p.ic}</span>
-                <div><div style={{fontWeight:700,fontSize:13,color:p.tx}}>{r.texto}</div>{alu&&<div style={{fontSize:11,color:GR,marginTop:2}}>👤 {alu.nombre}</div>}</div>
-              </div>;
-            })}
-        </div>
-      )}
 
       {/* Indicadores presentes/ausentes */}
       {esHoy && evs.length>0 && (()=>{
