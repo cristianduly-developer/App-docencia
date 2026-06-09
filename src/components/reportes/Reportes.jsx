@@ -274,7 +274,7 @@ ${firmaHTML(firmas)}
 // ── Vista por alumno ──────────────────────────────────────────
 const POR_PAG = 30;
 
-function VistaAlumno({ alumno, escuelas, docentes, alumnos, onVerAlumno }) {
+function VistaAlumno({ alumno, escuelas, docentes, alumnos, registros, onVerAlumno }) {
   const escuela = escuelas.find(e => e.id === alumno.escuelaId);
   const ec = escuela?.color || G;
   const [tab, setTab] = useState("historial");
@@ -286,12 +286,20 @@ function VistaAlumno({ alumno, escuelas, docentes, alumnos, onVerAlumno }) {
   const cicloAct = ciclo();
   const storageKey = `aye_docs_${alumno.id}_${cicloAct}`;
   const [docs, setDocsState] = useState(() => leer(storageKey, { ppi: {}, medio: {}, final: {} }));
-  const [regsAlu, setRegsAlu] = useState([]);
+
+  // Usar registros del prop (ya cargados) y complementar con fetch si hay más en Supabase
+  const regsLocal = ((registros || {})[alumno.id] || []).filter(r => !r.eliminado).sort((a, b) => b.fecha > a.fecha ? 1 : -1);
+  const [regsExtra, setRegsExtra] = useState([]);
+  const regsAlu = regsExtra.length > regsLocal.length ? regsExtra : regsLocal;
 
   useEffect(() => {
+    setRegsExtra([]);
     fetch("/api/db/registros_alumnos", { headers: authHeaders() })
       .then(r => r.json())
-      .then(rows => setRegsAlu((rows || []).filter(r => String(r.alumnoId) === String(alumno.id) && !r.eliminado).sort((a, b) => b.fecha > a.fecha ? 1 : -1)))
+      .then(rows => {
+        const filtrados = (rows || []).filter(r => String(r.alumnoId) === String(alumno.id) && !r.eliminado).sort((a, b) => b.fecha > a.fecha ? 1 : -1);
+        if (filtrados.length > 0) setRegsExtra(filtrados);
+      })
       .catch(() => {});
   }, [alumno.id]);
 
@@ -338,7 +346,7 @@ function VistaAlumno({ alumno, escuelas, docentes, alumnos, onVerAlumno }) {
         <div style={{ fontSize: 11, color: "rgba(255,255,255,.7)", marginBottom: 12 }}>{alumno.diagnostico} · {regsAlu.length} registros</div>
         <div style={{ display: "flex", gap: 8 }}>
           {onVerAlumno && (
-            <button onClick={() => onVerAlumno(alumno)}
+            <button onClick={() => onVerAlumno(alumno.id)}
               style={{ background: "rgba(255,255,255,.2)", border: "none", borderRadius: 10, padding: "8px 12px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
               👤 Ver ficha
             </button>
@@ -501,7 +509,7 @@ export default function Reportes({ alumnos, docentes, pros, escuelas, registros,
         </select>
         {!alumno
           ? <Card sx={{ textAlign: "center", padding: 40 }}><div style={{ fontSize: 40, marginBottom: 12 }}>📊</div><div style={{ fontWeight: 700, fontSize: 16, color: TX, marginBottom: 6 }}>Seleccioná un alumno</div><div style={{ fontSize: 13, color: GR }}>Para ver el historial de registros y generar informes pedagógicos.</div></Card>
-          : <VistaAlumno alumno={alumno} escuelas={escuelas} docentes={docentes} alumnos={alumnos} onVerAlumno={onVerAlumno} />}
+          : <VistaAlumno alumno={alumno} escuelas={escuelas} docentes={docentes} alumnos={alumnos} registros={registros} onVerAlumno={id => onVerAlumno(id)} />}
       </div>
     </div>
   );
