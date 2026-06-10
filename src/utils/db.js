@@ -21,7 +21,9 @@ export const DB = {
       try {
         const arr = JSON.parse(localStorage.getItem("aye_" + tabla) || "[]");
         const idx = arr.findIndex(x => x.id === obj.id);
-        if (idx >= 0) arr[idx] = obj; else arr.push(obj);
+        // Marcar como _offline solo si el fetch falló (sin conexión)
+        const guardado = navigator.onLine ? obj : { ...obj, _offline: true };
+        if (idx >= 0) arr[idx] = guardado; else arr.push(guardado);
         localStorage.setItem("aye_" + tabla, JSON.stringify(arr));
       } catch {}
     }
@@ -55,9 +57,9 @@ export const DB = {
       if (res.status === 401) { manejar401(); return def; }
       if (res.ok) {
         const remoto = await res.json();
-        if (remoto && remoto.length > 0) {
-          // Registros: Supabase devuelve array plano, app necesita diccionario por alumnoId
-          if (tabla === "registros") {
+        // Registros: Supabase devuelve array plano, app necesita diccionario por alumnoId
+        if (tabla === "registros") {
+          if (remoto && remoto.length > 0) {
             const dictRemoto = {};
             remoto.forEach(r => {
               const aId = r.aluId;
@@ -73,27 +75,32 @@ export const DB = {
             localStorage.setItem("aye_registros", JSON.stringify(merged));
             return merged;
           }
-          // Resto: merge por id
-          const local = (() => { try { return JSON.parse(localStorage.getItem("aye_" + tabla) || "[]"); } catch { return []; } })();
-          const supaIds = new Set(remoto.map(x => String(x.id)));
-          const soloLocales = local.filter(x => !supaIds.has(String(x.id)));
-          const merged = [
-            ...remoto.map(sup => {
-              const loc = local.find(l => String(l.id) === String(sup.id));
-              return loc ? { ...loc, ...sup } : sup;
-            }),
-            ...soloLocales,
-          ];
-          localStorage.setItem("aye_" + tabla, JSON.stringify(merged));
-          soloLocales.forEach(item => {
-            fetch("/api/db/" + tabla, {
-              method: "POST",
-              headers: authHeaders(),
-              body: JSON.stringify(item),
-            }).catch(() => {});
-          });
-          return merged;
+          localStorage.setItem("aye_registros", JSON.stringify({}));
+          return {};
         }
+        // Resto: el servidor respondió OK — es la fuente de verdad
+        const local = (() => { try { return JSON.parse(localStorage.getItem("aye_" + tabla) || "[]"); } catch { return []; } })();
+        const supaIds = new Set((remoto || []).map(x => String(x.id)));
+        // Solo re-subir items creados offline que el servidor no conoce
+        const soloLocales = local.filter(x => x._offline && !supaIds.has(String(x.id)));
+        const merged = remoto && remoto.length > 0
+          ? [
+              ...remoto.map(sup => {
+                const loc = local.find(l => String(l.id) === String(sup.id));
+                return loc ? { ...loc, ...sup } : sup;
+              }),
+              ...soloLocales,
+            ]
+          : soloLocales;
+        localStorage.setItem("aye_" + tabla, JSON.stringify(merged));
+        soloLocales.forEach(item => {
+          fetch("/api/db/" + tabla, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(item),
+          }).catch(() => {});
+        });
+        return merged.length > 0 ? merged : (remoto || def);
       }
     } catch {}
     try { return JSON.parse(localStorage.getItem("aye_" + tabla) || "null") || def; }
