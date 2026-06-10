@@ -105,7 +105,8 @@ function getDb(orgId) {
 }
 
 // ── Admins globales del sistema ───────────────────────────────
-const ADMINS = ['cristianduly@gmail.com'];
+const ADMINS = (process.env.ADMIN_EMAILS || 'cristianduly@gmail.com')
+  .split(',').map(e => e.trim()).filter(Boolean);
 
 // ── Token HMAC firmado — sin estado en servidor (funciona en serverless) ──
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 horas
@@ -739,7 +740,7 @@ app.post('/api/seed', (req, res, next) => {
 // ══════════════════════════════════════════════════════════════
 // Health check
 // ══════════════════════════════════════════════════════════════
-app.get('/api/health', async (req, res) => {
+app.get('/api/health', requireAuth, async (req, res) => {
   const { error } = await supabase.from('escuelas').select('count').limit(1);
   res.json({ status: 'ok', supabase: error ? 'error' : 'conectado', timestamp: new Date().toISOString() });
 });
