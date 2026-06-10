@@ -99,12 +99,10 @@ export default function App() {
   // ── Mutators ───────────────────────────────────────────────
   const saveEsc = e => { setEscuelas(p => p.find(x => x.id === e.id) ? p.map(x => x.id === e.id ? e : x) : [...p, e]); DB.save("escuelas", e); };
   const saveDoc = d => { setDocentes(p => p.find(x => x.id === d.id) ? p.map(x => x.id === d.id ? d : x) : [...p, d]); DB.save("docentes", d); };
-  const savePro = p => { setPros(prev => prev.find(x => x.id === p.id) ? prev.map(x => x.id === p.id ? p : x) : [...prev, p]); DB.save("profesionales", p); };
   const saveAlu = a => { setAlumnos(p => p.find(x => x.id === a.id) ? p.map(x => x.id === a.id ? normAlu(a) : x) : [...p, normAlu(a)]); DB.save("alumnos", a); };
   const delAlu  = id => { const upd = { ...alumnos.find(a => a.id === id), eliminado: true }; setAlumnos(p => p.map(a => a.id === id ? upd : a)); DB.save("alumnos", upd); };
   const delEsc  = id => { const upd = { ...escuelas.find(e => e.id === id), eliminado: true }; setEscuelas(p => p.map(e => e.id === id ? upd : e)); DB.save("escuelas", upd); };
   const delDoc  = id => { const upd = { ...docentes.find(d => d.id === id), eliminado: true }; setDocentes(p => p.map(d => d.id === id ? upd : d)); DB.save("docentes", upd); };
-  const delPro  = id => { const upd = { ...pros.find(p => p.id === id), eliminado: true }; setPros(p => p.map(x => x.id === id ? upd : x)); DB.save("profesionales", upd); };
   const toggleActivoAlu = id => { const a = alumnos.find(x => x.id === id); const upd = { ...a, activo: a.activo === false }; setAlumnos(p => p.map(x => x.id === id ? upd : x)); DB.save("alumnos", upd); };
   const toggleActivoEsc = id => { const e = escuelas.find(x => x.id === id); const upd = { ...e, activo: e.activo === false }; setEscuelas(p => p.map(x => x.id === id ? upd : x)); DB.save("escuelas", upd); };
   const toggleActivoDoc = id => { const d = docentes.find(x => x.id === id); const upd = { ...d, activo: d.activo === false }; setDocentes(p => p.map(x => x.id === id ? upd : x)); DB.save("docentes", upd); };
@@ -305,7 +303,7 @@ export default function App() {
             {editandoAlu
               ? <FormAlumno
                   inicial={editandoAlu}
-                  escuelas={escuelas} docentes={docentes} pros={pros}
+                  escuelas={escuelas}
                   onSave={a => { saveAluConCurso(a); setEditandoAlu(null); }}
                   onCancel={() => setEditandoAlu(null)}
                 />
@@ -325,7 +323,7 @@ export default function App() {
                     onSave={a => { saveAluConCurso(a); }}
                   />
                 : <SecAlumnosPanel
-                    alumnos={alumnos} escuelas={escuelas} docentes={docentes} pros={pros}
+                    alumnos={alumnos} escuelas={escuelas}
                     onVer={a => { setAluSel(a); cargarHistorialAlumno(a.id); }}
                     onEditar={a => setEditandoAlu(a)}
                     onNuevo={() => {
@@ -344,11 +342,10 @@ export default function App() {
           {/* ── DIRECTORIO ── */}
           {pant === "directorio" && (
             <Directorio
-              alumnos={alumnos} escuelas={escuelas} docentes={docentes} pros={pros}
+              alumnos={alumnos} escuelas={escuelas} docentes={docentes}
               onVer={id => { setAluSel(alumnos.find(a => a.id === id) || { id }); setPant("alumnos"); }}
               saveEsc={saveEsc} delEsc={delEsc}
               saveDoc={saveDoc} delDoc={delDoc}
-              savePro={savePro} delPro={delPro}
               toggleActivoEsc={toggleActivoEsc}
               toggleActivoDoc={toggleActivoDoc}
               archivarAlumnosEsc={archivarAlumnosEsc}

@@ -3,7 +3,7 @@ import { G, GR, GL, BD, TX, DIAS_L } from '../../constants';
 import { uid, hMin } from '../../utils/helpers';
 import { Card, Btn, Fld, Sel, SecT, WA } from '../ui';
 
-export default function FormAlumno({ inicial, escuelas, docentes, pros, onSave, onCancel }) {
+export default function FormAlumno({ inicial, escuelas, onSave, onCancel }) {
   const ed = !!(inicial && inicial.id);
   const parseCurso = (c) => {
     if (!c) return { anio: "", division: "" };
@@ -44,9 +44,6 @@ export default function FormAlumno({ inicial, escuelas, docentes, pros, onSave, 
   const setTr = (i, k, v) => sf(p => ({ ...p, trayectoria: p.trayectoria.map((t, ti) => ti === i ? { ...t, [k]: v } : t) }));
   const addTr = () => sf(p => ({ ...p, trayectoria: [{ ciclo: "", institucion: "", nivel: "", notas: "" }, ...p.trayectoria] }));
   const delTr = i => sf(p => ({ ...p, trayectoria: p.trayectoria.filter((_, ti) => ti !== i) }));
-  const togglePro = id => sf(p => ({ ...p, profesionalIds: p.profesionalIds.includes(id) ? p.profesionalIds.filter(x => x !== id) : [...p.profesionalIds, id] }));
-
-  const prosActivos = pros.filter(p => !p.eliminado);
   const ok = !!(f.nombre && f.escuelaId);
 
   return (

@@ -636,7 +636,7 @@ function SecProfesionales({ alumnos }) {
 }
 
 // ── Directorio principal ──────────────────────────────────────
-export default function Directorio({ alumnos, escuelas, docentes, pros, onVer, saveEsc, delEsc, saveDoc, savePro, delDoc, delPro, toggleActivoEsc, toggleActivoDoc, archivarAlumnosEsc }) {
+export default function Directorio({ alumnos, escuelas, docentes, onVer, saveEsc, delEsc, saveDoc, delDoc, toggleActivoEsc, toggleActivoDoc, archivarAlumnosEsc }) {
   const [seccion, setSeccion] = useState("escuelas");
   const SECS = [
     { id:"escuelas", icon:"🏫", label:"Escuelas"      },

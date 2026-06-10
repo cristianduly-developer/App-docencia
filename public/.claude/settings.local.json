@@ -5,7 +5,10 @@
       "WebFetch(domain:aye-app-one.vercel.app)",
       "Bash(vercel --prod)",
       "PowerShell(New-Item -ItemType File -Path \"C:\\\\Users\\\\payef\\\\OneDrive\\\\Desktop\\\\saas-admin-panel\\\\src\\\\index.css\" -Force)",
-      "Bash(dir \"C:\\\\Users\\\\payef\\\\OneDrive\\\\Desktop\\\\saas-admin-panel\\\\src\\\\components\")"
+      "Bash(dir \"C:\\\\Users\\\\payef\\\\OneDrive\\\\Desktop\\\\saas-admin-panel\\\\src\\\\components\")",
+      "Bash(find \"C:\\\\Users\\\\payef\\\\OneDrive\\\\Desktop\\\\saas-admin-panel\" -type f \\\\\\( -name \"*.sql\" -o -name \"*migration*\" -o -name \"*schema*\" -o -name \"*database*\" \\\\\\))",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__navigate"
     ]
   }
 }

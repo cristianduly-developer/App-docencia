@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { G, GR, GL, BD, TX } from '../../constants';
 import { Card, Confirm } from '../ui';
 
-export default function SecAlumnosPanel({ alumnos, escuelas, docentes, pros, onVer, onEditar, onNuevo, onSave, onDelete, onToggleActivo }) {
+export default function SecAlumnosPanel({ alumnos, escuelas, onVer, onEditar, onNuevo, onSave, onDelete, onToggleActivo }) {
   const [busq, setBusq] = useState("");
   const [filtroNivel, setFiltroNivel] = useState("");
   const [verArchivados, setVerArchivados] = useState(false);
