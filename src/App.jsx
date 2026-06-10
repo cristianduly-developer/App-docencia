@@ -20,14 +20,6 @@ import CoPilot          from './components/copilot/CoPilot';
 import MiPlan           from './components/miplan/MiPlan';
 
 export default function App() {
-  // Reset de emergencia: ?reset en la URL limpia localStorage y recarga
-  useEffect(() => {
-    if (window.location.search.includes('reset')) {
-      localStorage.clear();
-      window.location.replace('/');
-    }
-  }, []);
-
   // ── Autenticación ──────────────────────────────────────────
   const [usuario, setUsuario] = useState(() => {
     const u = leer("aye_sesion", null);
