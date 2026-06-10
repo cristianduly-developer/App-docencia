@@ -151,6 +151,18 @@ function requireAuth(req, res, next) {
 // ══════════════════════════════════════════════════════════════
 
 // ── ESCUELAS ─────────────────────────────────────────────────
+function _turnoParaDB(t) {
+  t = t || {};
+  return {
+    secretaria:         t.secretaria          || '',
+    telefonoSecretaria: t.telefonoSecretaria   || '',
+    mailSecretaria:     t.mailSecretaria        || '',
+    preceptor:          t.preceptor             || '',
+    telefonoPreceptor:  t.telefonoPreceptor     || '',
+    mailPreceptor:      t.mailPreceptor          || '',
+    eoe:                t.eoe                   || [],
+  };
+}
 function escParaDB(e) {
   return {
     id:        e.id,
@@ -158,23 +170,61 @@ function escParaDB(e) {
     nivel:     e.nivel     || '',
     color:     e.color     || '#2D6A4F',
     direccion: e.direccion || '',
-    eoe:       e.eoe       || [],
+    eoe:       [],
     activo:    e.activo    !== false,
     eliminado: e.eliminado || false,
     ciclo_archivado: e.cicloArchivado || null,
+    contactos: {
+      telefono:             e.telefono              || '',
+      director:             e.director              || '',
+      telefonoDirector:     e.telefonoDirector       || '',
+      mailDirector:         e.mailDirector           || '',
+      vicedirector:         e.vicedirector           || '',
+      telefonoVicedirector: e.telefonoVicedirector   || '',
+      mailVicedirector:     e.mailVicedirector        || '',
+      turnoDia:   _turnoParaDB(e.turnoDia),
+      turnoTarde: _turnoParaDB(e.turnoTarde),
+    },
   };
 }
 function escDesdeDB(r) {
+  const c  = r.contactos || {};
+  const td = c.turnoDia   || {};
+  const tt = c.turnoTarde || {};
   return {
     id:             r.id,
     nombre:         r.nombre,
     nivel:          r.nivel,
     color:          r.color || '#2D6A4F',
     direccion:      r.direccion,
-    eoe:            r.eoe || [],
     activo:         r.activo !== false,
     eliminado:      r.eliminado || false,
     cicloArchivado: r.ciclo_archivado,
+    telefono:             c.telefono              || '',
+    director:             c.director              || '',
+    telefonoDirector:     c.telefonoDirector       || '',
+    mailDirector:         c.mailDirector           || '',
+    vicedirector:         c.vicedirector           || '',
+    telefonoVicedirector: c.telefonoVicedirector   || '',
+    mailVicedirector:     c.mailVicedirector        || '',
+    turnoDia: {
+      secretaria:         td.secretaria          || '',
+      telefonoSecretaria: td.telefonoSecretaria   || '',
+      mailSecretaria:     td.mailSecretaria        || '',
+      preceptor:          td.preceptor             || '',
+      telefonoPreceptor:  td.telefonoPreceptor     || '',
+      mailPreceptor:      td.mailPreceptor          || '',
+      eoe:                td.eoe                   || [],
+    },
+    turnoTarde: {
+      secretaria:         tt.secretaria          || '',
+      telefonoSecretaria: tt.telefonoSecretaria   || '',
+      mailSecretaria:     tt.mailSecretaria        || '',
+      preceptor:          tt.preceptor             || '',
+      telefonoPreceptor:  tt.telefonoPreceptor     || '',
+      mailPreceptor:      tt.mailPreceptor          || '',
+      eoe:                tt.eoe                   || [],
+    },
   };
 }
 
@@ -304,30 +354,32 @@ function aluDesdeDB(r) {
 // Para save: el cliente manda { ...reg, alumnoId } como un objeto plano
 function regParaDB(obj) {
   return {
-    id:         obj.id,
-    alumno_id:  obj.alumnoId || obj.aluId || null,
-    fecha:      obj.fecha,
-    materia:    obj.materia    || '',
-    asistencia: obj.asistencia || 'presente',
-    avance:     obj.avance     || '',
-    acuerdo:    obj.acuerdo    || '',
-    docente:    obj.docente    || '',
-    tipo:       obj.tipo       || 'clase',
-    eliminado:  obj.eliminado  || false,
+    id:           obj.id,
+    alumno_id:    obj.alumnoId || obj.aluId || null,
+    fecha:        obj.fecha,
+    materia:      obj.materia      || '',
+    asistencia:   obj.asistencia   || 'presente',
+    avance:       obj.avance       || '',
+    acuerdo:      obj.acuerdo      || '',
+    docente:      obj.docente      || '',
+    tipo:         obj.tipo         || 'clase',
+    recordatorio: obj.recordatorio || '',
+    eliminado:    obj.eliminado    || false,
   };
 }
 function regDesdeDB(r) {
   return {
-    id:        r.id,
-    aluId:     r.alumno_id,
-    fecha:     r.fecha,
-    materia:   r.materia,
-    asistencia:r.asistencia,
-    avance:    r.avance,
-    acuerdo:   r.acuerdo,
-    docente:   r.docente,
-    tipo:      r.tipo || 'clase',
-    eliminado: r.eliminado || false,
+    id:           r.id,
+    aluId:        r.alumno_id,
+    fecha:        r.fecha,
+    materia:      r.materia,
+    asistencia:   r.asistencia,
+    avance:       r.avance,
+    acuerdo:      r.acuerdo,
+    docente:      r.docente,
+    tipo:         r.tipo         || 'clase',
+    recordatorio: r.recordatorio || '',
+    eliminado:    r.eliminado    || false,
   };
 }
 

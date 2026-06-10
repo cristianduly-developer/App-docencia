@@ -5,6 +5,76 @@ import { Card, Btn, Fld, Sel, SecT, WA, Mail, Confirm } from '../ui';
 
 const COLORES = ["#2D6A4F","#1d4ed8","#7c3aed","#dc2626","#d97706","#0891b2","#be185d","#15803d"];
 
+function defaultTurno() {
+  return { secretaria:'', telefonoSecretaria:'', mailSecretaria:'', preceptor:'', telefonoPreceptor:'', mailPreceptor:'', eoe:[] };
+}
+
+function SeccionTurnoForm({ label, icon, turno, onChange }) {
+  const set = (k, v) => onChange({ ...turno, [k]: v });
+  const setEoe = (i, k, v) => onChange({ ...turno, eoe: turno.eoe.map((m, mi) => mi === i ? { ...m, [k]: v } : m) });
+  const addEoe = () => onChange({ ...turno, eoe: [...(turno.eoe || []), { nombre:'', rol:'Orientadora', telefono:'', mail:'' }] });
+  const delEoe = i => onChange({ ...turno, eoe: turno.eoe.filter((_, mi) => mi !== i) });
+  return (
+    <div style={{ background:'#fff', border:`1.5px solid ${BD}`, borderRadius:12, padding:'12px 14px', marginBottom:14 }}>
+      <div style={{ fontWeight:700, fontSize:13, color:TX, marginBottom:10 }}>{icon} {label}</div>
+      <Fld label="Secretaria/o" value={turno.secretaria||''} onChange={v=>set('secretaria',v)} placeholder="Apellido, Nombre" />
+      <Fld label="Teléfono secretaria/o" value={turno.telefonoSecretaria||''} onChange={v=>set('telefonoSecretaria',v)} placeholder="11-xxxx-xxxx" />
+      <Fld label="Mail secretaria/o" value={turno.mailSecretaria||''} onChange={v=>set('mailSecretaria',v)} placeholder="" />
+      <Fld label="Preceptor/a" value={turno.preceptor||''} onChange={v=>set('preceptor',v)} placeholder="Apellido, Nombre" />
+      <Fld label="Teléfono preceptor/a" value={turno.telefonoPreceptor||''} onChange={v=>set('telefonoPreceptor',v)} placeholder="11-xxxx-xxxx" />
+      <Fld label="Mail preceptor/a" value={turno.mailPreceptor||''} onChange={v=>set('mailPreceptor',v)} placeholder="" />
+      <div style={{ marginTop:10, borderTop:`1px solid ${BD}`, paddingTop:10 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+          <div style={{ fontWeight:700, fontSize:12, color:GR }}>🔬 EOE</div>
+          <button onClick={addEoe} style={{ background:G+'18', border:'none', borderRadius:8, padding:'3px 8px', fontSize:11, fontWeight:700, color:G, cursor:'pointer', fontFamily:'inherit' }}>+ Agregar</button>
+        </div>
+        {(turno.eoe||[]).length === 0
+          ? <div style={{ fontSize:12, color:GL, fontStyle:'italic' }}>Sin integrantes EOE</div>
+          : (turno.eoe||[]).map((m, i) => (
+              <div key={i} style={{ borderTop:`1px solid ${BD}`, paddingTop:8, marginTop:8 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                  <div style={{ fontWeight:600, fontSize:12 }}>Integrante {i+1}</div>
+                  <button onClick={()=>delEoe(i)} style={{ background:'none', border:'none', cursor:'pointer', color:'#dc2626', fontSize:13, padding:0 }}>🗑</button>
+                </div>
+                <Fld label="Nombre" value={m.nombre} onChange={v=>setEoe(i,'nombre',v)} placeholder="Lic. ..." />
+                <Fld label="Rol" value={m.rol} onChange={v=>setEoe(i,'rol',v)} placeholder="Orientadora..." />
+                <Fld label="Teléfono" value={m.telefono||''} onChange={v=>setEoe(i,'telefono',v)} placeholder="11-xxxx-xxxx" />
+                <Fld label="Mail" value={m.mail||''} onChange={v=>setEoe(i,'mail',v)} />
+              </div>
+            ))}
+      </div>
+    </div>
+  );
+}
+
+function TurnoCard({ turno, label, icon }) {
+  if (!turno) return null;
+  const hasSec = turno.secretaria;
+  const hasPre = turno.preceptor;
+  const hasEoe = (turno.eoe||[]).length > 0;
+  if (!hasSec && !hasPre && !hasEoe) return null;
+  const items = [
+    hasSec && { titulo:'Secretaria/o', nombre:turno.secretaria, tel:turno.telefonoSecretaria, mail:turno.mailSecretaria },
+    hasPre && { titulo:'Preceptor/a',  nombre:turno.preceptor,  tel:turno.telefonoPreceptor,  mail:turno.mailPreceptor  },
+    ...(turno.eoe||[]).map(m => ({ titulo:`EOE — ${m.rol||'Integrante'}`, nombre:m.nombre, tel:m.telefono, mail:m.mail })),
+  ].filter(Boolean);
+  return (
+    <Card>
+      <SecT text={`${icon} ${label}`} />
+      {items.map((it, i) => (
+        <div key={i} style={{ padding:'10px 0', borderBottom:i<items.length-1?`1px solid ${BD}`:'none' }}>
+          <div style={{ fontSize:11, fontWeight:700, color:GR, textTransform:'uppercase', marginBottom:4 }}>{it.titulo}</div>
+          <div style={{ fontWeight:700, fontSize:14, color:TX }}>{it.nombre}</div>
+          <div style={{ display:'flex', gap:8, marginTop:6, flexWrap:'wrap' }}>
+            {it.tel && <WA tel={it.tel} />}
+            {it.mail && <Mail mail={it.mail} />}
+          </div>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
 // ── Modal cierre de escuela ───────────────────────────────────
 function ModalCierreEscuela({ escuela, alusAct, docsEsc, onArchivarTodo, onCerrarCiclo, onClose }) {
   const ec = escuela.color || G;
@@ -110,11 +180,11 @@ function FichaEscuela({ escuela, alumnos, docentes, onEditar, onToggleActivo, on
       </div>
 
       {/* Equipo directivo */}
-      {(escuela.director || escuela.secretaria || (escuela.eoe||[]).length>0) && (
+      {(escuela.director || escuela.vicedirector) && (
         <Card>
           <SecT text="Equipo directivo" />
           {escuela.director && (
-            <div style={{ padding:"10px 0",borderBottom:`1px solid ${BD}` }}>
+            <div style={{ padding:"10px 0", borderBottom:escuela.vicedirector?`1px solid ${BD}`:"none" }}>
               <div style={{ fontSize:11,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:4 }}>Director/a</div>
               <div style={{ fontWeight:700,fontSize:14,color:TX }}>{escuela.director}</div>
               <div style={{ display:"flex",gap:8,marginTop:6,flexWrap:"wrap" }}>
@@ -123,28 +193,21 @@ function FichaEscuela({ escuela, alumnos, docentes, onEditar, onToggleActivo, on
               </div>
             </div>
           )}
-          {escuela.secretaria && (
-            <div style={{ padding:"10px 0",borderBottom:`1px solid ${BD}` }}>
-              <div style={{ fontSize:11,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:4 }}>Secretaria/o</div>
-              <div style={{ fontWeight:700,fontSize:14,color:TX }}>{escuela.secretaria}</div>
+          {escuela.vicedirector && (
+            <div style={{ padding:"10px 0" }}>
+              <div style={{ fontSize:11,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:4 }}>Vicedirector/a</div>
+              <div style={{ fontWeight:700,fontSize:14,color:TX }}>{escuela.vicedirector}</div>
               <div style={{ display:"flex",gap:8,marginTop:6,flexWrap:"wrap" }}>
-                {escuela.telefonoSecretaria && <WA tel={escuela.telefonoSecretaria} />}
-                {escuela.mailSecretaria && <Mail mail={escuela.mailSecretaria} />}
+                {escuela.telefonoVicedirector && <WA tel={escuela.telefonoVicedirector} />}
+                {escuela.mailVicedirector && <Mail mail={escuela.mailVicedirector} />}
               </div>
             </div>
           )}
-          {(escuela.eoe||[]).map((m,i,arr) => (
-            <div key={i} style={{ padding:"10px 0",borderBottom:i<arr.length-1?`1px solid ${BD}`:"none" }}>
-              <div style={{ fontSize:11,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:4 }}>EOE — {m.rol||"Integrante"}</div>
-              <div style={{ fontWeight:700,fontSize:14,color:TX }}>{m.nombre}</div>
-              <div style={{ display:"flex",gap:8,marginTop:6,flexWrap:"wrap" }}>
-                {m.telefono && <WA tel={m.telefono} />}
-                {m.mail && <Mail mail={m.mail} />}
-              </div>
-            </div>
-          ))}
         </Card>
       )}
+
+      <TurnoCard turno={escuela.turnoDia}   label="Turno Día"   icon="☀️" />
+      <TurnoCard turno={escuela.turnoTarde} label="Turno Tarde" icon="🌙" />
 
       {/* Docentes */}
       {docsEsc.length>0 && (
@@ -181,20 +244,27 @@ function FichaEscuela({ escuela, alumnos, docentes, onEditar, onToggleActivo, on
 
 // ── Form Escuela ──────────────────────────────────────────────
 function FormEscuela({ inicial, escuelas, onSave, onCancel }) {
-  const [form, setForm] = useState(() => inicial ? { ...inicial } : {
-    id:uid(), nombre:"", nivel:"Primaria", color:G, direccion:"", telefono:"",
-    director:"", telefonoDirector:"", mailDirector:"",
-    secretaria:"", telefonoSecretaria:"", mailSecretaria:"",
-    eoe:[], eliminado:false,
+  const [form, setForm] = useState(() => {
+    if (inicial) return {
+      ...inicial,
+      turnoDia:   inicial.turnoDia   || defaultTurno(),
+      turnoTarde: inicial.turnoTarde || defaultTurno(),
+    };
+    return {
+      id:uid(), nombre:'', nivel:'Primaria', color:G, direccion:'', telefono:'',
+      director:'', telefonoDirector:'', mailDirector:'',
+      vicedirector:'', telefonoVicedirector:'', mailVicedirector:'',
+      turnoDia:   defaultTurno(),
+      turnoTarde: defaultTurno(),
+      eliminado:false,
+    };
   });
   const set = (k,v) => setForm(p=>({...p,[k]:v}));
-  const setEoe = (i,k,v) => setForm(p=>({...p,eoe:p.eoe.map((m,mi)=>mi===i?{...m,[k]:v}:m)}));
-  const addEoe = () => setForm(p=>({...p,eoe:[...(p.eoe||[]),{nombre:"",rol:"Orientadora",telefono:"",mail:""}]}));
-  const delEoe = i => setForm(p=>({...p,eoe:p.eoe.filter((_,mi)=>mi!==i)}));
 
   return (
     <div style={{ background:"#f8fafc",border:`2px solid ${form.color||G}`,borderRadius:16,padding:16,marginBottom:12 }}>
       <div style={{ fontWeight:800,fontSize:15,marginBottom:12 }}>{inicial?"Editar escuela":"Nueva escuela"}</div>
+
       <Fld label="Nombre" value={form.nombre} onChange={v=>set("nombre",v)} placeholder="Escuela N° ..." />
       <div style={{ marginBottom:14 }}>
         <div style={{ fontSize:12,fontWeight:700,color:GR,textTransform:"uppercase",marginBottom:6 }}>Nivel</div>
@@ -210,6 +280,8 @@ function FormEscuela({ inicial, escuelas, onSave, onCancel }) {
       </div>
       <Fld label="Dirección" value={form.direccion||""} onChange={v=>set("direccion",v)} placeholder="Calle, número..." />
       <Fld label="Teléfono institucional" value={form.telefono||""} onChange={v=>set("telefono",v)} placeholder="011-xxxx-xxxx" />
+
+      {/* Equipo directivo */}
       <div style={{ background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"12px 14px",marginBottom:14 }}>
         <div style={{ fontWeight:700,fontSize:13,color:TX,marginBottom:10 }}>👤 Director/a</div>
         <Fld label="Nombre completo" value={form.director||""} onChange={v=>set("director",v)} placeholder="Apellido, Nombre" />
@@ -217,31 +289,23 @@ function FormEscuela({ inicial, escuelas, onSave, onCancel }) {
         <Fld label="Mail" value={form.mailDirector||""} onChange={v=>set("mailDirector",v)} placeholder="director@escuela.edu.ar" />
       </div>
       <div style={{ background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"12px 14px",marginBottom:14 }}>
-        <div style={{ fontWeight:700,fontSize:13,color:TX,marginBottom:10 }}>📋 Secretaria/o</div>
-        <Fld label="Nombre completo" value={form.secretaria||""} onChange={v=>set("secretaria",v)} placeholder="Apellido, Nombre" />
-        <Fld label="Teléfono" value={form.telefonoSecretaria||""} onChange={v=>set("telefonoSecretaria",v)} placeholder="11-xxxx-xxxx" />
-        <Fld label="Mail" value={form.mailSecretaria||""} onChange={v=>set("mailSecretaria",v)} placeholder="secretaria@escuela.edu.ar" />
+        <div style={{ fontWeight:700,fontSize:13,color:TX,marginBottom:10 }}>👤 Vicedirector/a</div>
+        <Fld label="Nombre completo" value={form.vicedirector||""} onChange={v=>set("vicedirector",v)} placeholder="Apellido, Nombre" />
+        <Fld label="Teléfono" value={form.telefonoVicedirector||""} onChange={v=>set("telefonoVicedirector",v)} placeholder="11-xxxx-xxxx" />
+        <Fld label="Mail" value={form.mailVicedirector||""} onChange={v=>set("mailVicedirector",v)} placeholder="vice@escuela.edu.ar" />
       </div>
-      <div style={{ background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"12px 14px",marginBottom:14 }}>
-        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
-          <div style={{ fontWeight:700,fontSize:13,color:TX }}>🔬 EOE</div>
-          <button onClick={addEoe} style={{ background:G+"18",border:"none",borderRadius:8,padding:"4px 10px",fontSize:12,fontWeight:700,color:G,cursor:"pointer",fontFamily:"inherit" }}>+ Agregar</button>
-        </div>
-        {(form.eoe||[]).length===0
-          ? <div style={{ fontSize:12,color:GL,fontStyle:"italic" }}>Sin integrantes cargados</div>
-          : (form.eoe||[]).map((m,i)=>(
-              <div key={i} style={{ borderTop:`1px solid ${BD}`,paddingTop:10,marginTop:10 }}>
-                <div style={{ display:"flex",justifyContent:"space-between",marginBottom:8 }}>
-                  <div style={{ fontWeight:600,fontSize:13 }}>Integrante {i+1}</div>
-                  <button onClick={()=>delEoe(i)} style={{ background:"none",border:"none",cursor:"pointer",color:"#dc2626",fontSize:14,padding:0 }}>🗑</button>
-                </div>
-                <Fld label="Nombre" value={m.nombre} onChange={v=>setEoe(i,"nombre",v)} placeholder="Lic. ..." />
-                <Fld label="Rol" value={m.rol} onChange={v=>setEoe(i,"rol",v)} placeholder="Orientadora..." />
-                <Fld label="Teléfono" value={m.telefono||""} onChange={v=>setEoe(i,"telefono",v)} placeholder="11-xxxx-xxxx" />
-                <Fld label="Mail" value={m.mail||""} onChange={v=>setEoe(i,"mail",v)} placeholder="eoe@escuela.edu.ar" />
-              </div>
-            ))}
-      </div>
+
+      <SeccionTurnoForm
+        label="Turno Día" icon="☀️"
+        turno={form.turnoDia}
+        onChange={t=>set("turnoDia",t)}
+      />
+      <SeccionTurnoForm
+        label="Turno Tarde" icon="🌙"
+        turno={form.turnoTarde}
+        onChange={t=>set("turnoTarde",t)}
+      />
+
       <div style={{ display:"flex",gap:8 }}>
         <Btn outline onClick={onCancel} color={GR}>Cancelar</Btn>
         <Btn onClick={()=>onSave(form)} color={form.color||G} full disabled={!form.nombre}>Guardar</Btn>
