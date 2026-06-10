@@ -512,6 +512,11 @@ app.post('/api/verify-token', async (req, res) => {
 
       orgId = acceso.ret_org_id || acceso.org_id || null;
 
+      // Guard crítico: si no hay org_id la docente vería datos de todos — bloqueamos
+      if (!orgId) {
+        return res.status(403).json({ error: 'Tu cuenta no tiene una organización asignada. Contactá al administrador.' });
+      }
+
       // Usar el nombre cargado en el panel admin (nombre_docente de organizaciones)
       if (acceso.nombre_docente) {
         nombreDocente = acceso.nombre_docente;
