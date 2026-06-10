@@ -25,8 +25,8 @@ export default function SecAlumnosPanel({ alumnos, escuelas, docentes, pros, onV
             <div style={{ fontWeight: 800, fontSize: 20 }}>👤 Alumnos</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,.75)", marginTop: 2 }}>{base.length} {verArchivados ? "archivados" : "activos"}</div>
           </div>
-          <button onClick={onNuevo} style={{ background: "rgba(255,255,255,.2)", border: "none", borderRadius: 12, color: "#fff", padding: "8px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-            + Nuevo
+          <button onClick={onNuevo} style={{ background: "#fff", border: "none", borderRadius: 12, color: G, padding: "10px 18px", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 8px rgba(0,0,0,.15)" }}>
+            + Nuevo alumno
           </button>
         </div>
         <input value={busq} onChange={e => setBusq(e.target.value)} placeholder="🔍 Buscar por nombre o curso..."
@@ -52,10 +52,14 @@ export default function SecAlumnosPanel({ alumnos, escuelas, docentes, pros, onV
       {/* Lista */}
       <div style={{ padding: "12px 16px 0" }}>
         {filtrados.length === 0
-          ? <Card sx={{ textAlign: "center", padding: 32 }}>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>👤</div>
-              <div style={{ color: GR }}>{verArchivados ? "Sin alumnos archivados" : "Sin alumnos. Tocá + Nuevo."}</div>
-            </Card>
+          ? <div onClick={verArchivados ? undefined : onNuevo}
+              style={{ textAlign:"center", padding:40, borderRadius:16, border:`2px dashed ${G}`, background:"#f0fdf4", cursor: verArchivados ? "default" : "pointer", margin:"4px 0" }}>
+              <div style={{ fontSize:40, marginBottom:10 }}>👤</div>
+              <div style={{ color: verArchivados ? GR : G, fontWeight:700, fontSize:15 }}>
+                {verArchivados ? "Sin alumnos archivados" : "Sin alumnos — tocá para agregar"}
+              </div>
+              {!verArchivados && <div style={{ color:GL, fontSize:12, marginTop:6 }}>+ Nuevo alumno</div>}
+            </div>
           : filtrados.map(a => {
               const esc = escuelas.find(e => e.id === a.escuelaId);
               const col = esc?.color || G;

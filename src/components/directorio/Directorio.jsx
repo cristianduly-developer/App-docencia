@@ -374,13 +374,18 @@ function SecEscuelas({ escuelas, alumnos, docentes, onSave, onDelete, onToggleAc
   return (
     <div>
       <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-        <button onClick={()=>setForm("nueva")} style={{ flex:1,padding:12,borderRadius:14,border:`2px dashed ${G}`,background:"#f0fdf4",color:G,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit" }}>+ Nueva escuela</button>
-        <button onClick={()=>setVerArch(v=>!v)} style={{ padding:"12px 14px",borderRadius:14,border:"2px solid",borderColor:verArch?"#94a3b8":BD,background:verArch?"#f1f5f9":"#fff",color:"#94a3b8",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap" }}>
-          {verArch?"✅ Activas":"📦 Archivadas"}
+        <button onClick={()=>setForm("nueva")} style={{ flex:1,padding:13,borderRadius:14,border:"none",background:G,color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 2px 8px rgba(45,106,79,.35)" }}>+ Nueva escuela</button>
+        <button onClick={()=>setVerArch(v=>!v)} style={{ padding:"13px 14px",borderRadius:14,border:"2px solid",borderColor:verArch?"#94a3b8":BD,background:verArch?"#f1f5f9":"#fff",color:"#94a3b8",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap" }}>
+          {verArch?"✅ Activas":"📦 Arch."}
         </button>
       </div>
       {activas.length===0
-        ? <Card sx={{ textAlign:"center",padding:32,color:GR }}>{verArch?"Sin escuelas archivadas":"Sin escuelas. Agregá la primera."}</Card>
+        ? <div onClick={verArch ? undefined : ()=>setForm("nueva")}
+            style={{ textAlign:"center",padding:40,borderRadius:16,border:`2px dashed ${G}`,background:"#f0fdf4",cursor:verArch?"default":"pointer" }}>
+            <div style={{ fontSize:40,marginBottom:10 }}>🏫</div>
+            <div style={{ color:verArch?GR:G,fontWeight:700,fontSize:15 }}>{verArch?"Sin escuelas archivadas":"Sin escuelas — tocá para agregar"}</div>
+            {!verArch && <div style={{ color:GL,fontSize:12,marginTop:6 }}>+ Nueva escuela</div>}
+          </div>
         : activas.map(e=>{
             const aluCount = alumnos.filter(a=>a.escuelaId===e.id&&!a.eliminado&&(verArch?a.activo===false:a.activo!==false)).length;
             return (
@@ -515,7 +520,7 @@ function SecDocentes({ docentes, escuelas, alumnos, onSave, onDelete, onToggleAc
   return (
     <div>
       <button onClick={()=>setForm({id:uid(),nombre:"",materia:"",escuelaId:"",telefono:"",mail:"",eliminado:false})}
-        style={{ width:"100%",padding:12,borderRadius:14,border:`2px dashed ${G}`,background:"#f0fdf4",color:G,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit",marginBottom:12 }}>
+        style={{ width:"100%",padding:13,borderRadius:14,border:"none",background:G,color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit",marginBottom:12,boxShadow:"0 2px 8px rgba(45,106,79,.35)" }}>
         + Nuevo docente
       </button>
 
@@ -539,7 +544,14 @@ function SecDocentes({ docentes, escuelas, alumnos, onSave, onDelete, onToggleAc
       )}
 
       {filtrados.length===0
-        ? <Card sx={{ textAlign:"center",padding:32,color:GR }}>{verArch?"Sin docentes archivados":activos.length===0?"Sin docentes cargados.":"Sin resultados."}</Card>
+        ? <div onClick={(!verArch && activos.length===0) ? ()=>setForm({id:uid(),nombre:"",materia:"",escuelaId:"",telefono:"",mail:"",eliminado:false}) : undefined}
+            style={{ textAlign:"center",padding:40,borderRadius:16,border:`2px dashed ${G}`,background:"#f0fdf4",cursor:(!verArch&&activos.length===0)?"pointer":"default" }}>
+            <div style={{ fontSize:40,marginBottom:10 }}>👩‍🏫</div>
+            <div style={{ color:(!verArch&&activos.length===0)?G:GR,fontWeight:700,fontSize:15 }}>
+              {verArch?"Sin docentes archivados":activos.length===0?"Sin docentes — tocá para agregar":"Sin resultados."}
+            </div>
+            {!verArch && activos.length===0 && <div style={{ color:GL,fontSize:12,marginTop:6 }}>+ Nuevo docente</div>}
+          </div>
         : filtrados.map(d=>{
             const esc = escuelas.find(e=>e.id===d.escuelaId);
             return (
