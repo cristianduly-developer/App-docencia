@@ -94,7 +94,7 @@ function FichaEscuela({ escuela, alumnos, docentes, onEditar, onToggleActivo, on
       <div style={{ display:"flex",gap:8,marginBottom:16 }}>
         <button onClick={() => onEditar(escuela)} style={{ flex:1,background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"10px 6px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:13,color:TX }}>✏️ Editar</button>
         {inact
-          ? <button onClick={() => setConf({ msg:`¿Reactivar ${escuela.nombre}?`, ok:()=>{ onToggleActivo(escuela.id); setConf(null); onBack(); } })}
+          ? <button onClick={() => setConf({ msg:`¿Reactivar "${escuela.nombre}"? Los alumnos del ciclo anterior no se reactivarán — podés ingresarlos nuevamente si los necesitás.`, ok:()=>{ onToggleActivo(escuela.id); setConf(null); onBack(); } })}
               style={{ flex:1,background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"10px 6px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:13,color:G }}>
               ▶ Reactivar
             </button>
@@ -310,10 +310,11 @@ function SecEscuelas({ escuelas, alumnos, docentes, onSave, onDelete, onToggleAc
 }
 
 // ── Ficha Docente ─────────────────────────────────────────────
-function FichaDocente({ docente, escuelas, alumnos, onEditar, onDelete, onBack }) {
+function FichaDocente({ docente, escuelas, alumnos, onEditar, onDelete, onToggleActivo, onBack }) {
   const [conf, setConf] = useState(null);
   const esc = escuelas.find(e=>e.id===docente.escuelaId);
   const ec = esc?.color || G;
+  const inact = docente.activo === false;
   const alusDoc = alumnos.filter(a=>!a.eliminado&&a.activo!==false&&(a.horarios||[]).some(h=>h.docenteId===docente.id));
 
   return (
@@ -345,6 +346,16 @@ function FichaDocente({ docente, escuelas, alumnos, onEditar, onDelete, onBack }
       {/* Acciones */}
       <div style={{ display:"flex",gap:8,marginBottom:16 }}>
         <button onClick={()=>onEditar(docente)} style={{ flex:1,background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"10px 6px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:13,color:TX }}>✏️ Editar</button>
+        {inact
+          ? <button onClick={()=>setConf({ msg:`¿Reactivar a ${docente.nombre}?`, ok:()=>{ onToggleActivo(docente.id); setConf(null); onBack(); } })}
+              style={{ flex:1,background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"10px 6px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:13,color:G }}>
+              ▶ Reactivar
+            </button>
+          : <button onClick={()=>setConf({ msg:`¿Archivar a ${docente.nombre}? Dejará de aparecer en la lista activa.`, ok:()=>{ onToggleActivo(docente.id); setConf(null); onBack(); } })}
+              style={{ flex:1,background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"10px 6px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:13,color:GR }}>
+              📦 Archivar
+            </button>
+        }
         <button onClick={()=>setConf({ msg:`¿Eliminar a ${docente.nombre}? Esta acción no se puede deshacer.`, ok:()=>{ onDelete(docente.id); setConf(null); onBack(); } })}
           style={{ flex:1,background:"#fff",border:"1.5px solid #fca5a5",borderRadius:12,padding:"10px 6px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:13,color:"#dc2626" }}>
           🗑 Eliminar
@@ -368,7 +379,7 @@ function FichaDocente({ docente, escuelas, alumnos, onEditar, onDelete, onBack }
 }
 
 // ── SecDocentes ───────────────────────────────────────────────
-function SecDocentes({ docentes, escuelas, alumnos, onSave, onDelete }) {
+function SecDocentes({ docentes, escuelas, alumnos, onSave, onDelete, onToggleActivo }) {
   const [form, setForm] = useState(null);
   const [ficha, setFicha] = useState(null);
   const [busq, setBusq] = useState("");
@@ -404,6 +415,7 @@ function SecDocentes({ docentes, escuelas, alumnos, onSave, onDelete }) {
       alumnos={alumnos}
       onEditar={d=>{ setFicha(null); setForm({...d}); }}
       onDelete={onDelete}
+      onToggleActivo={id=>{ onToggleActivo(id); setFicha(null); }}
       onBack={()=>setFicha(null)}
     />
   );
@@ -510,7 +522,7 @@ function SecProfesionales({ pros, onSave, onDelete }) {
 }
 
 // ── Directorio principal ──────────────────────────────────────
-export default function Directorio({ alumnos, escuelas, docentes, pros, onVer, saveEsc, delEsc, saveDoc, savePro, delDoc, delPro, toggleActivoEsc, archivarAlumnosEsc }) {
+export default function Directorio({ alumnos, escuelas, docentes, pros, onVer, saveEsc, delEsc, saveDoc, savePro, delDoc, delPro, toggleActivoEsc, toggleActivoDoc, archivarAlumnosEsc }) {
   const [seccion, setSeccion] = useState("escuelas");
   const SECS = [
     { id:"escuelas", icon:"🏫", label:"Escuelas"      },
@@ -532,7 +544,7 @@ export default function Directorio({ alumnos, escuelas, docentes, pros, onVer, s
       </div>
       <div style={{ padding:"16px 16px 80px" }}>
         {seccion==="escuelas" && <SecEscuelas escuelas={escuelas} alumnos={alumnos} docentes={docentes} onSave={saveEsc} onDelete={delEsc} onToggleActivo={toggleActivoEsc} onArchivarAlumnos={archivarAlumnosEsc} />}
-        {seccion==="docentes" && <SecDocentes docentes={docentes} escuelas={escuelas} alumnos={alumnos} onSave={saveDoc} onDelete={delDoc} />}
+        {seccion==="docentes" && <SecDocentes docentes={docentes} escuelas={escuelas} alumnos={alumnos} onSave={saveDoc} onDelete={delDoc} onToggleActivo={toggleActivoDoc} />}
         {seccion==="pros"     && <SecProfesionales pros={pros} onSave={savePro} onDelete={delPro} />}
       </div>
     </div>

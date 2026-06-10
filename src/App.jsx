@@ -107,6 +107,7 @@ export default function App() {
   const delPro  = id => { const upd = { ...pros.find(p => p.id === id), eliminado: true }; setPros(p => p.map(x => x.id === id ? upd : x)); DB.save("profesionales", upd); };
   const toggleActivoAlu = id => { const a = alumnos.find(x => x.id === id); const upd = { ...a, activo: a.activo === false }; setAlumnos(p => p.map(x => x.id === id ? upd : x)); DB.save("alumnos", upd); };
   const toggleActivoEsc = id => { const e = escuelas.find(x => x.id === id); const upd = { ...e, activo: e.activo === false }; setEscuelas(p => p.map(x => x.id === id ? upd : x)); DB.save("escuelas", upd); };
+  const toggleActivoDoc = id => { const d = docentes.find(x => x.id === id); const upd = { ...d, activo: d.activo === false }; setDocentes(p => p.map(x => x.id === id ? upd : x)); DB.save("docentes", upd); };
   const archivarAlumnosEsc = (escId, ciclo, tambienDocentes) => {
     const updAlumnos = alumnos.map(a => a.escuelaId === escId && a.activo !== false ? { ...a, activo: false, cicloArchivado: ciclo } : a);
     setAlumnos(updAlumnos);
@@ -349,6 +350,7 @@ export default function App() {
               saveDoc={saveDoc} delDoc={delDoc}
               savePro={savePro} delPro={delPro}
               toggleActivoEsc={toggleActivoEsc}
+              toggleActivoDoc={toggleActivoDoc}
               archivarAlumnosEsc={archivarAlumnosEsc}
             />
           )}
