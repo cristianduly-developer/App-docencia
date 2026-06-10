@@ -47,32 +47,32 @@ function SeccionTurnoForm({ label, icon, turno, onChange }) {
   );
 }
 
-function TurnoCard({ turno, label, icon }) {
+function TurnoCard({ turno, label, icon, inline }) {
   if (!turno) return null;
   const hasSec = turno.secretaria;
   const hasPre = turno.preceptor;
   const hasEoe = (turno.eoe||[]).length > 0;
-  if (!hasSec && !hasPre && !hasEoe) return null;
+  if (!hasSec && !hasPre && !hasEoe) {
+    const empty = <div style={{ color:GL, fontSize:13, fontStyle:'italic' }}>Sin personal cargado para este turno</div>;
+    return inline ? empty : <Card><SecT text={`${icon} ${label}`} />{empty}</Card>;
+  }
   const items = [
     hasSec && { titulo:'Secretaria/o', nombre:turno.secretaria, tel:turno.telefonoSecretaria, mail:turno.mailSecretaria },
     hasPre && { titulo:'Preceptor/a',  nombre:turno.preceptor,  tel:turno.telefonoPreceptor,  mail:turno.mailPreceptor  },
     ...(turno.eoe||[]).map(m => ({ titulo:`EOE — ${m.rol||'Integrante'}`, nombre:m.nombre, tel:m.telefono, mail:m.mail })),
   ].filter(Boolean);
-  return (
-    <Card>
-      <SecT text={`${icon} ${label}`} />
-      {items.map((it, i) => (
-        <div key={i} style={{ padding:'10px 0', borderBottom:i<items.length-1?`1px solid ${BD}`:'none' }}>
-          <div style={{ fontSize:11, fontWeight:700, color:GR, textTransform:'uppercase', marginBottom:4 }}>{it.titulo}</div>
-          <div style={{ fontWeight:700, fontSize:14, color:TX }}>{it.nombre}</div>
-          <div style={{ display:'flex', gap:8, marginTop:6, flexWrap:'wrap' }}>
-            {it.tel && <WA tel={it.tel} />}
-            {it.mail && <Mail mail={it.mail} />}
-          </div>
-        </div>
-      ))}
-    </Card>
-  );
+  const content = items.map((it, i) => (
+    <div key={i} style={{ padding:'10px 0', borderBottom:i<items.length-1?`1px solid ${BD}`:'none' }}>
+      <div style={{ fontSize:11, fontWeight:700, color:GR, textTransform:'uppercase', marginBottom:4 }}>{it.titulo}</div>
+      <div style={{ fontWeight:700, fontSize:14, color:TX }}>{it.nombre}</div>
+      <div style={{ display:'flex', gap:8, marginTop:6, flexWrap:'wrap' }}>
+        {it.tel && <WA tel={it.tel} />}
+        {it.mail && <Mail mail={it.mail} />}
+      </div>
+    </div>
+  ));
+  if (inline) return <>{content}</>;
+  return <Card><SecT text={`${icon} ${label}`} />{content}</Card>;
 }
 
 // ── Modal cierre de escuela ───────────────────────────────────
@@ -118,6 +118,7 @@ function ModalCierreEscuela({ escuela, alusAct, docsEsc, onArchivarTodo, onCerra
 function FichaEscuela({ escuela, alumnos, docentes, onEditar, onToggleActivo, onArchivarAlumnos, onDelete, onBack }) {
   const [conf, setConf] = useState(null);
   const [modalCierre, setModalCierre] = useState(false);
+  const [turnoFicha, setTurnoFicha] = useState('mañana');
   const ec = escuela.color || G;
   const alusAct = alumnos.filter(a => a.escuelaId === escuela.id && !a.eliminado && a.activo !== false);
   const docsEsc = docentes.filter(d => d.escuelaId === escuela.id && !d.eliminado);
@@ -206,8 +207,20 @@ function FichaEscuela({ escuela, alumnos, docentes, onEditar, onToggleActivo, on
         </Card>
       )}
 
-      <TurnoCard turno={escuela.turnoDia}   label="Turno Día"   icon="☀️" />
-      <TurnoCard turno={escuela.turnoTarde} label="Turno Tarde" icon="🌙" />
+      {/* Tabs turnos */}
+      {((escuela.turnoDia && (escuela.turnoDia.secretaria||escuela.turnoDia.preceptor||(escuela.turnoDia.eoe||[]).length>0)) ||
+        (escuela.turnoTarde && (escuela.turnoTarde.secretaria||escuela.turnoTarde.preceptor||(escuela.turnoTarde.eoe||[]).length>0))) && (
+        <Card>
+          <div style={{ display:'flex', gap:0, marginBottom:12, borderRadius:10, overflow:'hidden', border:`1.5px solid ${BD}` }}>
+            {[['mañana','☀️ Mañana'],['tarde','🌙 Tarde']].map(([k,l])=>(
+              <button key={k} onClick={()=>setTurnoFicha(k)} style={{ flex:1,padding:'10px',border:'none',background:turnoFicha===k?ec:'#fff',color:turnoFicha===k?'#fff':TX,fontWeight:700,fontSize:13,cursor:'pointer',fontFamily:'inherit' }}>{l}</button>
+            ))}
+          </div>
+          {turnoFicha==='mañana'
+            ? <TurnoCard turno={escuela.turnoDia}   label="Turno Mañana" icon="☀️" inline />
+            : <TurnoCard turno={escuela.turnoTarde} label="Turno Tarde"  icon="🌙" inline />}
+        </Card>
+      )}
 
       {/* Docentes */}
       {docsEsc.length>0 && (
@@ -259,6 +272,8 @@ function FormEscuela({ inicial, escuelas, onSave, onCancel }) {
       eliminado:false,
     };
   });
+  const [turnoTab, setTurnoTab] = useState('mañana');
+  const [mismoPersonal, setMismoPersonal] = useState(false);
   const set = (k,v) => setForm(p=>({...p,[k]:v}));
 
   return (
@@ -295,16 +310,29 @@ function FormEscuela({ inicial, escuelas, onSave, onCancel }) {
         <Fld label="Mail" value={form.mailVicedirector||""} onChange={v=>set("mailVicedirector",v)} placeholder="vice@escuela.edu.ar" />
       </div>
 
-      <SeccionTurnoForm
-        label="Turno Día" icon="☀️"
-        turno={form.turnoDia}
-        onChange={t=>set("turnoDia",t)}
-      />
-      <SeccionTurnoForm
-        label="Turno Tarde" icon="🌙"
-        turno={form.turnoTarde}
-        onChange={t=>set("turnoTarde",t)}
-      />
+      {/* Tabs turnos */}
+      <div style={{ display:'flex', gap:0, borderRadius:10, overflow:'hidden', border:`1.5px solid ${BD}`, marginBottom:10 }}>
+        {[['mañana','☀️ Mañana'],['tarde','🌙 Tarde']].map(([k,l])=>(
+          <button key={k} onClick={()=>setTurnoTab(k)} style={{ flex:1,padding:'10px',border:'none',background:turnoTab===k?(form.color||G):'#fff',color:turnoTab===k?'#fff':TX,fontWeight:700,fontSize:13,cursor:'pointer',fontFamily:'inherit' }}>{l}</button>
+        ))}
+      </div>
+      <label style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12, cursor:'pointer' }}>
+        <input type="checkbox" checked={mismoPersonal} onChange={e=>{
+          const v = e.target.checked;
+          setMismoPersonal(v);
+          if (v) setForm(p=>({...p, turnoTarde:{...p.turnoDia}}));
+        }} style={{ width:16, height:16 }} />
+        <span style={{ fontSize:13, fontWeight:600, color:GR }}>Mismo personal en ambos turnos</span>
+      </label>
+      {turnoTab==='mañana'
+        ? <SeccionTurnoForm label="Turno Mañana" icon="☀️" turno={form.turnoDia} onChange={t=>{
+            set('turnoDia', t);
+            if (mismoPersonal) set('turnoTarde', t);
+          }} />
+        : mismoPersonal
+          ? <div style={{ textAlign:'center', color:GL, fontSize:13, fontStyle:'italic', padding:'20px 0' }}>Mismo personal que turno mañana</div>
+          : <SeccionTurnoForm label="Turno Tarde" icon="🌙" turno={form.turnoTarde} onChange={t=>set('turnoTarde',t)} />
+      }
 
       <div style={{ display:"flex",gap:8 }}>
         <Btn outline onClick={onCancel} color={GR}>Cancelar</Btn>

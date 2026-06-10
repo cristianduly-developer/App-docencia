@@ -17,7 +17,7 @@ export default function FormAlumno({ inicial, escuelas, docentes, pros, onSave, 
       direccion: "", telefonoCasa: "", cud: false, cudNumero: "", cudVencimiento: "",
       diagnostico: "", obraSocial: "", nroAfiliado: "", medicacion: "",
       tutores: [{ nombre: "", relacion: "", telefono: "", principal: true }],
-      terapias: [{ nombre: "", frecuencia: "", profesional: "" }],
+      terapias: [{ nombre: "", profesional: "", telefono: "", frecuencia: "", dias: "" }],
       trayectoria: [{ ciclo: String(new Date().getFullYear()), institucion: "", nivel: "", notas: "" }],
       profesionalIds: [], horarios: [], eliminado: false,
     };
@@ -27,7 +27,7 @@ export default function FormAlumno({ inicial, escuelas, docentes, pros, onSave, 
       anio: base.anio || parsed.anio,
       division: base.division || parsed.division,
       tutores: base.tutores?.length ? base.tutores : [{ nombre: "", relacion: "", telefono: "", principal: true }],
-      terapias: base.terapias?.length ? base.terapias : [{ nombre: "", frecuencia: "", profesional: "" }],
+      terapias: base.terapias?.length ? base.terapias : [{ nombre: "", profesional: "", telefono: "", frecuencia: "", dias: "" }],
       trayectoria: base.trayectoria?.length ? base.trayectoria : [{ ciclo: String(new Date().getFullYear()), institucion: "", nivel: "", notas: "" }],
       profesionalIds: base.profesionalIds || [],
       horarios: base.horarios || [],
@@ -39,7 +39,7 @@ export default function FormAlumno({ inicial, escuelas, docentes, pros, onSave, 
   const addT = () => sf(p => ({ ...p, tutores: [...p.tutores, { nombre: "", relacion: "", telefono: "", principal: false }] }));
   const delT = i => sf(p => ({ ...p, tutores: p.tutores.filter((_, ti) => ti !== i) }));
   const setTer = (i, k, v) => sf(p => ({ ...p, terapias: p.terapias.map((t, ti) => ti === i ? { ...t, [k]: v } : t) }));
-  const addTer = () => sf(p => ({ ...p, terapias: [...p.terapias, { nombre: "", frecuencia: "", profesional: "" }] }));
+  const addTer = () => sf(p => ({ ...p, terapias: [...p.terapias, { nombre: "", profesional: "", telefono: "", frecuencia: "", dias: "" }] }));
   const delTer = i => sf(p => ({ ...p, terapias: p.terapias.filter((_, ti) => ti !== i) }));
   const setTr = (i, k, v) => sf(p => ({ ...p, trayectoria: p.trayectoria.map((t, ti) => ti === i ? { ...t, [k]: v } : t) }));
   const addTr = () => sf(p => ({ ...p, trayectoria: [{ ciclo: "", institucion: "", nivel: "", notas: "" }, ...p.trayectoria] }));
@@ -140,9 +140,11 @@ export default function FormAlumno({ inicial, escuelas, docentes, pros, onSave, 
               <div style={{ fontWeight: 700, fontSize: 13, color: TX }}>Terapia {i + 1}</div>
               {f.terapias.length > 1 && <button onClick={() => delTer(i)} style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", fontSize: 16, padding: 0 }}>🗑</button>}
             </div>
-            <Fld label="Nombre" value={t.nombre} onChange={v => setTer(i, "nombre", v)} placeholder="Psicopedagogía, Fonoaudiología..." />
+            <Fld label="Tipo de terapia" value={t.nombre} onChange={v => setTer(i, "nombre", v)} placeholder="Psicopedagogía, Fonoaudiología..." />
             <Fld label="Profesional" value={t.profesional} onChange={v => setTer(i, "profesional", v)} placeholder="Lic. ..." />
+            <Fld label="Teléfono profesional" value={t.telefono||""} onChange={v => setTer(i, "telefono", v)} placeholder="11-xxxx-xxxx" />
             <Fld label="Frecuencia" value={t.frecuencia} onChange={v => setTer(i, "frecuencia", v)} placeholder="2 veces por semana..." />
+            <Fld label="Días" value={t.dias||""} onChange={v => setTer(i, "dias", v)} placeholder="Lunes y Miércoles..." />
           </div>
         ))}
       </Card>

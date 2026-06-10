@@ -512,8 +512,11 @@ export default function FichaAlumno({ alumno, alumnos, docentes, pros, escuelas,
             {(alumno.terapias || []).map((t, i, arr) => (
               <div key={i} style={{ padding: "10px 0", borderBottom: i < arr.length - 1 ? `1px solid ${BD}` : "none" }}>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>🔬 {t.nombre}</div>
-                <div style={{ fontSize: 12, color: GR, marginTop: 2 }}>{t.profesional}</div>
-                <div style={{ fontSize: 11, color: GL, marginTop: 1 }}>{t.frecuencia}</div>
+                <div style={{ fontSize: 12, color: GR, marginTop: 2 }}>{t.profesional}{t.dias ? ` · ${t.dias}` : ''}</div>
+                <div style={{ display:'flex', gap:8, marginTop:4, flexWrap:'wrap', alignItems:'center' }}>
+                  {t.frecuencia && <span style={{ fontSize:11, color:GL }}>{t.frecuencia}</span>}
+                  {t.telefono && <a href={`https://wa.me/54${t.telefono.replace(/[-\s]/g,'')}`} target="_blank" rel="noreferrer" style={{ display:'inline-flex',alignItems:'center',gap:4,background:'#25D366',color:'#fff',borderRadius:8,padding:'3px 8px',fontSize:11,fontWeight:700,textDecoration:'none' }}>💬 {t.telefono}</a>}
+                </div>
               </div>
             ))}
           </>}
