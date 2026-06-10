@@ -561,54 +561,64 @@ function SecDocentes({ docentes, escuelas, alumnos, onSave, onDelete, onToggleAc
 }
 
 // ── SecProfesionales ──────────────────────────────────────────
-function SecProfesionales({ pros, onSave, onDelete }) {
-  const [form, setForm] = useState(null);
-  const [conf, setConf] = useState(null);
-  const activos = pros.filter(p=>!p.eliminado);
-  const set = (k,v) => setForm(p=>({...p,[k]:v}));
+// Vista agregada: lee las terapias de todos los alumnos.
+// No tiene formulario propio — los profesionales se cargan desde el alumno.
+function SecProfesionales({ alumnos }) {
+  const [busq, setBusq] = useState('');
+
+  // Agrupar por nombre+teléfono para deduplicar
+  const mapa = {};
+  (alumnos || []).filter(a => !a.eliminado && a.activo !== false).forEach(a => {
+    (a.terapias || []).filter(t => t.profesional).forEach(t => {
+      const key = `${t.profesional.trim().toLowerCase()}||${t.telefono||''}`;
+      if (!mapa[key]) mapa[key] = { nombre:t.profesional, especialidad:t.nombre||'', telefono:t.telefono||'', alumnos:[] };
+      mapa[key].alumnos.push({ nombre:a.nombre, frecuencia:t.frecuencia||'' });
+    });
+  });
+  const lista = Object.values(mapa).sort((a,b) => a.nombre.localeCompare(b.nombre));
+
+  const filtrados = busq
+    ? lista.filter(p => {
+        const q = busq.toLowerCase();
+        return p.nombre.toLowerCase().includes(q)
+          || p.especialidad.toLowerCase().includes(q)
+          || p.alumnos.some(a => a.nombre.toLowerCase().includes(q));
+      })
+    : lista;
 
   return (
     <div>
-      {conf && <Confirm msg={conf.msg} onOk={conf.ok} onNo={()=>setConf(null)} />}
-      {form ? (
-        <div style={{ background:"#f8fafc",border:"2px solid #7c3aed",borderRadius:16,padding:16,marginBottom:12 }}>
-          <div style={{ fontWeight:800,fontSize:15,marginBottom:12 }}>{activos.find(p=>p.id===form.id)?"Editar profesional":"Nuevo profesional"}</div>
-          <Fld label="Nombre completo" value={form.nombre} onChange={v=>set("nombre",v)} placeholder="Lic. ..." />
-          <Fld label="Rol / Especialidad" value={form.rol} onChange={v=>set("rol",v)} placeholder="Psicopedagoga..." />
-          <Fld label="Teléfono" value={form.telefono} onChange={v=>set("telefono",v)} placeholder="11-xxxx-xxxx" />
-          <Fld label="Mail" value={form.mail} onChange={v=>set("mail",v)} placeholder="prof@consultorio.com" />
-          <div style={{ display:"flex",gap:8 }}>
-            <Btn outline onClick={()=>setForm(null)} color={GR}>Cancelar</Btn>
-            <Btn onClick={()=>{ onSave(form); setForm(null); }} color="#7c3aed" full disabled={!form.nombre}>Guardar</Btn>
-          </div>
-        </div>
-      ) : (
-        <button onClick={()=>setForm({id:uid(),nombre:"",rol:"",telefono:"",mail:"",eliminado:false})}
-          style={{ width:"100%",padding:12,borderRadius:14,border:"2px dashed #7c3aed",background:"#faf5ff",color:"#7c3aed",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit",marginBottom:12 }}>
-          + Nuevo profesional externo
-        </button>
-      )}
-      {activos.length===0
-        ? <Card sx={{ textAlign:"center",padding:32,color:GR }}>Sin profesionales externos.</Card>
-        : activos.map(p=>(
-            <Card key={p.id} sx={{ borderLeft:"4px solid #7c3aed" }}>
-              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:800,fontSize:15,color:TX }}>{p.nombre}</div>
-                  <div style={{ fontSize:12,color:GR,marginTop:2 }}>{p.rol}</div>
-                  {p.mail && <div style={{ fontSize:11,color:GL,marginTop:2 }}>✉ {p.mail}</div>}
-                  <div style={{ display:"flex",gap:8,marginTop:8 }}>
-                    {p.telefono && <WA tel={p.telefono} />}
-                    {p.mail && <Mail mail={p.mail} />}
-                  </div>
-                </div>
-                <div style={{ display:"flex",gap:6,alignItems:"center" }}>
-                  <button onClick={()=>setForm({...p})} style={{ background:"#f5f3ff",border:"none",borderRadius:8,padding:"5px 10px",cursor:"pointer",color:"#7c3aed",fontWeight:700,fontSize:12,fontFamily:"inherit" }}>Editar</button>
-                  <button onClick={()=>setConf({ msg:`¿Eliminar a ${p.nombre}?`,ok:()=>{ onDelete(p.id); setConf(null); } })} style={{ background:"#fef2f2",border:"none",borderRadius:8,padding:"5px 10px",cursor:"pointer",color:"#dc2626",fontWeight:700,fontSize:12,fontFamily:"inherit" }}>🗑</button>
-                </div>
+      <div style={{ fontSize:12, color:GL, marginBottom:10 }}>
+        Los profesionales se cargan desde las terapias de cada alumno.
+      </div>
+      <input
+        value={busq} onChange={e=>setBusq(e.target.value)}
+        placeholder="🔍 Buscar por nombre, especialidad o alumno..."
+        style={{ width:'100%', border:`1.5px solid ${BD}`, borderRadius:10, padding:'9px 14px', fontSize:13, fontFamily:'inherit', boxSizing:'border-box', marginBottom:12 }}
+      />
+      {filtrados.length === 0
+        ? <Card sx={{ textAlign:'center', padding:32, color:GR }}>
+            {lista.length === 0 ? 'Todavía no hay profesionales cargados en las terapias de los alumnos.' : 'Sin resultados.'}
+          </Card>
+        : filtrados.map((p, idx) => (
+            <Card key={idx} sx={{ borderLeft:'4px solid #7c3aed' }}>
+              <div style={{ fontWeight:800, fontSize:15, color:TX }}>{p.nombre}</div>
+              {p.especialidad && <div style={{ fontSize:12, color:'#7c3aed', fontWeight:700, marginTop:2 }}>{p.especialidad}</div>}
+              <div style={{ display:'flex', gap:8, marginTop:8, flexWrap:'wrap' }}>
+                {p.telefono && <WA tel={p.telefono} />}
               </div>
+              {p.alumnos.length > 0 && (
+                <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${BD}` }}>
+                  {p.alumnos.map((a, i) => (
+                    <div key={i} style={{ fontSize:12, color:GR, marginBottom:2 }}>
+                      👤 {a.nombre}{a.frecuencia ? <span style={{ color:GL }}> · {a.frecuencia}</span> : ''}
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
-          ))}
+          ))
+      }
     </div>
   );
 }
@@ -637,7 +647,7 @@ export default function Directorio({ alumnos, escuelas, docentes, pros, onVer, s
       <div style={{ padding:"16px 16px 80px" }}>
         {seccion==="escuelas" && <SecEscuelas escuelas={escuelas} alumnos={alumnos} docentes={docentes} onSave={saveEsc} onDelete={delEsc} onToggleActivo={toggleActivoEsc} onArchivarAlumnos={archivarAlumnosEsc} />}
         {seccion==="docentes" && <SecDocentes docentes={docentes} escuelas={escuelas} alumnos={alumnos} onSave={saveDoc} onDelete={delDoc} onToggleActivo={toggleActivoDoc} />}
-        {seccion==="pros"     && <SecProfesionales pros={pros} onSave={savePro} onDelete={delPro} />}
+        {seccion==="pros"     && <SecProfesionales alumnos={alumnos} />}
       </div>
     </div>
   );

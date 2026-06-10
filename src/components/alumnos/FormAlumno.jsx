@@ -143,33 +143,11 @@ export default function FormAlumno({ inicial, escuelas, docentes, pros, onSave, 
             <Fld label="Tipo de terapia" value={t.nombre} onChange={v => setTer(i, "nombre", v)} placeholder="Psicopedagogía, Fonoaudiología..." />
             <Fld label="Profesional" value={t.profesional} onChange={v => setTer(i, "profesional", v)} placeholder="Lic. ..." />
             <Fld label="Teléfono profesional" value={t.telefono||""} onChange={v => setTer(i, "telefono", v)} placeholder="11-xxxx-xxxx" />
-            <Fld label="Frecuencia" value={t.frecuencia} onChange={v => setTer(i, "frecuencia", v)} placeholder="2 veces por semana..." />
-            <Fld label="Días" value={t.dias||""} onChange={v => setTer(i, "dias", v)} placeholder="Lunes y Miércoles..." />
+            <Fld label="Frecuencia / Días" value={t.frecuencia} onChange={v => setTer(i, "frecuencia", v)} placeholder="Lunes y Miércoles, 2 veces por semana..." />
           </div>
         ))}
       </Card>
 
-      {prosActivos.length > 0 && (
-        <Card>
-          <SecT text="Profesionales externos" />
-          <div style={{ fontSize: 12, color: GL, marginBottom: 12 }}>Tocá para asociar al alumno.</div>
-          {prosActivos.map(p => {
-            const sel = f.profesionalIds.includes(p.id);
-            return (
-              <div key={p.id} onClick={() => togglePro(p.id)}
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${BD}`, cursor: "pointer" }}>
-                <div style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid ${sel ? G : BD}`, background: sel ? G : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {sel && <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#fff" }} />}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: TX }}>{p.nombre}</div>
-                  <div style={{ fontSize: 12, color: GR }}>{p.rol}</div>
-                </div>
-              </div>
-            );
-          })}
-        </Card>
-      )}
 
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
