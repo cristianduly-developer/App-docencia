@@ -191,7 +191,7 @@ function escDesdeDB(r) {
   const c  = r.contactos || {};
   const td = c.turnoDia   || {};
   const tt = c.turnoTarde || {};
-  return {
+  const base = {
     id:             r.id,
     nombre:         r.nombre,
     nivel:          r.nivel,
@@ -200,6 +200,12 @@ function escDesdeDB(r) {
     activo:         r.activo !== false,
     eliminado:      r.eliminado || false,
     cicloArchivado: r.ciclo_archivado,
+  };
+  // Si contactos está vacío (registro anterior a la migración), no pisamos los campos
+  // de contacto — db.js los preserva desde localStorage hasta que el usuario guarde de nuevo.
+  if (!r.contactos || Object.keys(c).length === 0) return base;
+  return {
+    ...base,
     telefono:             c.telefono              || '',
     director:             c.director              || '',
     telefonoDirector:     c.telefonoDirector       || '',
