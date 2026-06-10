@@ -20,21 +20,16 @@ export default function SecAlumnosPanel({ alumnos, escuelas, docentes, pros, onV
 
       {/* Header */}
       <div style={{ background: "linear-gradient(135deg,#2D6A4F,#40916c)", padding: "16px 20px 12px", color: "#fff" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, paddingRight: 72 }}>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 20 }}>👤 Alumnos</div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,.75)", marginTop: 2 }}>{base.length} {verArchivados ? "archivados" : "activos"}</div>
-          </div>
-          <button onClick={onNuevo} style={{ background: "#fff", border: "none", borderRadius: 12, color: G, padding: "10px 18px", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 8px rgba(0,0,0,.15)" }}>
-            + Nuevo alumno
-          </button>
+        <div style={{ marginBottom: 12, paddingRight: 72 }}>
+          <div style={{ fontWeight: 800, fontSize: 20 }}>👤 Alumnos</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,.75)", marginTop: 2 }}>{base.length} {verArchivados ? "archivados" : "activos"}</div>
         </div>
         <input value={busq} onChange={e => setBusq(e.target.value)} placeholder="🔍 Buscar por nombre o curso..."
           style={{ width: "100%", background: "rgba(255,255,255,.15)", border: "1.5px solid rgba(255,255,255,.3)", borderRadius: 12, padding: "8px 14px", fontSize: 13, fontFamily: "inherit", color: "#fff", boxSizing: "border-box", outline: "none" }} />
       </div>
 
-      {/* Filtros */}
-      <div style={{ padding: "10px 16px 0", display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+      {/* Filtros + Nuevo */}
+      <div style={{ padding: "10px 16px 0", display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, alignItems: "center" }}>
         <button onClick={() => setFiltroNivel("")} style={{ padding: "5px 12px", borderRadius: 20, border: "2px solid", borderColor: !filtroNivel ? G : BD, background: !filtroNivel ? G : "#fff", color: !filtroNivel ? "#fff" : "#475569", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0 }}>Todos</button>
         {[...new Set(escuelas.filter(e => !e.eliminado && e.activo !== false).map(e => e.nivel))].sort().map(nivel => {
           const color = escuelas.find(e => e.nivel === nivel && !e.eliminado)?.color || G;
@@ -44,6 +39,9 @@ export default function SecAlumnosPanel({ alumnos, escuelas, docentes, pros, onV
               style={{ padding: "5px 12px", borderRadius: 20, border: "2px solid", borderColor: activo ? color : BD, background: activo ? color : "#fff", color: activo ? "#fff" : "#475569", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0 }}>{nivel}</button>
           );
         })}
+        <button onClick={onNuevo} style={{ padding: "6px 14px", borderRadius: 20, border: "none", background: G, color: "#fff", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0, boxShadow: "0 2px 6px rgba(45,106,79,.35)" }}>
+          + Nuevo alumno
+        </button>
         <button onClick={() => setVerArchivados(v => !v)} style={{ padding: "5px 12px", borderRadius: 20, border: "2px solid", borderColor: verArchivados ? "#94a3b8" : BD, background: verArchivados ? "#f1f5f9" : "#fff", color: "#94a3b8", fontWeight: 700, fontSize: 11, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0, marginLeft: "auto" }}>
           {verArchivados ? "✅ Ver activos" : "📦 Archivados"}
         </button>
