@@ -10,9 +10,20 @@ const { OAuth2Client }  = require('google-auth-library');
 const app    = express();
 const PORT   = process.env.PORT || 3000;
 
-// ── Rate limiting simple en memoria ──────────────────────────
+// ── Rate limiting persistente via Supabase ───────────────────
+// Usa tabla rate_limits en Supabase — persiste entre invocaciones serverless
+// Fallback en memoria si Supabase no está disponible (desarrollo local)
 const _rl = new Map();
-function rateLimit(key, maxReqs, windowMs) {
+async function rateLimit(key, maxReqs, windowMs) {
+  try {
+    const { data, error } = await supabase.rpc('check_rate_limit', {
+      p_key: key,
+      p_max: maxReqs,
+      p_window_seconds: Math.floor(windowMs / 1000),
+    });
+    if (!error) return data === true;
+  } catch {}
+  // Fallback en memoria
   const now = Date.now();
   const entry = _rl.get(key) || { count: 0, reset: now + windowMs };
   if (now > entry.reset) { entry.count = 0; entry.reset = now + windowMs; }
@@ -46,7 +57,7 @@ async function verificarAccesoCentral(email, appId) {
 // ── CORS: solo dominios permitidos ───────────────────────────
 const ORIGINS_PERMITIDOS = [
   'https://aye-app-one.vercel.app',
-  'http://localhost:3000',
+  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : []),
 ];
 app.use(cors({
   origin: (origin, cb) => {
@@ -58,17 +69,48 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 app.use(require('express').static(require('path').join(__dirname, 'dist')));
 
+// Cliente global con service key — para operaciones admin y fallback
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
   process.env.SUPABASE_KEY || ''
 );
+
+// ── RLS Fase 2: cliente por request con JWT que lleva org_id ──
+// Supabase verifica este JWT con SUPABASE_JWT_SECRET y aplica RLS por org
+function _firmarJWTOrg(orgId) {
+  const secret = process.env.SUPABASE_JWT_SECRET;
+  if (!secret) return null;
+  const header  = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    iss: 'supabase', role: 'authenticated',
+    org_id: orgId || '',
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  })).toString('base64url');
+  const sig = crypto.createHmac('sha256', secret).update(`${header}.${payload}`).digest('base64url');
+  return `${header}.${payload}.${sig}`;
+}
+
+function getDb(orgId) {
+  const anonKey   = process.env.SUPABASE_ANON_KEY;
+  const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+  if (anonKey && jwtSecret && orgId) {
+    const token = _firmarJWTOrg(orgId);
+    if (token) return createClient(process.env.SUPABASE_URL, anonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth:   { persistSession: false },
+    });
+  }
+  return supabase; // fallback: service key (admin sin org o env vars no configuradas)
+}
 
 // ── Admins globales del sistema ───────────────────────────────
 const ADMINS = ['cristianduly@gmail.com'];
 
 // ── Token HMAC firmado — sin estado en servidor (funciona en serverless) ──
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 horas
-const SESSION_SECRET = process.env.SESSION_SECRET || 'aye-secret-key-2025';
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET) throw new Error('SESSION_SECRET env var es requerida');
 
 function crearToken(email, nombre, foto, orgId, plan) {
   const payload = JSON.stringify({ email, nombre, foto, orgId: orgId || null, plan: plan || 'basico', exp: Date.now() + SESSION_TTL_MS });
@@ -349,7 +391,7 @@ const MAPEO = {
 // ══════════════════════════════════════════════════════════════
 app.post('/api/verify-token', async (req, res) => {
   const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.ip || 'unknown';
-  if (rateLimit(`login:${ip}`, 10, 60_000)) // máx 10 intentos por minuto por IP
+  if (await rateLimit(`login:${ip}`, 10, 60_000)) // máx 10 intentos por minuto por IP
     return res.status(429).json({ error: 'Demasiados intentos. Esperá un minuto.' });
   try {
     const { credential } = req.body;
@@ -377,7 +419,14 @@ app.post('/api/verify-token', async (req, res) => {
 
     if (esAdmin) {
       // Admin entra sin verificación de suscripción
-      orgId = null; // ve todos los datos (sin filtro por org)
+      // Buscar su org en el SaaS central para filtrar datos propios (no ve datos de otros)
+      try {
+        const resultadoAdmin = await verificarAccesoCentral(email, 'docentes');
+        const accesoAdmin = Array.isArray(resultadoAdmin) ? (resultadoAdmin[0] || null) : resultadoAdmin;
+        orgId = accesoAdmin?.ret_org_id || accesoAdmin?.org_id || null;
+      } catch {
+        orgId = null; // sin org registrada — acceso sin filtro solo como último recurso
+      }
     } else {
       // Verificar acceso en el SaaS central
       try {
@@ -456,7 +505,7 @@ TONO: Profesional, empático, técnico-pedagógico impecable. El texto debe pode
 
 app.post('/api/claude', requireAuth, async (req, res) => {
   const emailKey = req.session?.email || req.ip;
-  if (rateLimit(`claude:${emailKey}`, 20, 60_000)) // máx 20 llamadas por minuto por usuario
+  if (await rateLimit(`claude:${emailKey}`, 20, 60_000)) // máx 20 llamadas por minuto por usuario
     return res.status(429).json({ error: 'Límite de consultas alcanzado. Esperá un momento.' });
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key no configurada' });
@@ -502,7 +551,7 @@ TABLAS.forEach(tabla => {
   // GET — lee y convierte snake_case → camelCase, filtrado por org_id
   app.get(`/api/db/${tabla}`, requireAuth, async (req, res) => {
     try {
-      let query = supabase.from(tabla).select('*');
+      let query = getDb(req.orgId).from(tabla).select('*');
       if (req.orgId) query = query.eq('org_id', req.orgId);
       // Excluir registros borrados — incluye null (registros sin el campo seteado)
       query = query.or('eliminado.eq.false,eliminado.is.null');
@@ -531,8 +580,9 @@ TABLAS.forEach(tabla => {
       // Siempre inyectar org_id del token — no se puede falsificar desde el cliente
       if (req.orgId) body = { ...body, org_id: req.orgId };
       // Auto-strip: si Supabase rechaza un campo, lo quitamos y reintentamos
+      const db = getDb(req.orgId);
       for(let i = 0; i < 5; i++) {
-        const { data, error } = await supabase.from(tabla).upsert(body).select();
+        const { data, error } = await db.from(tabla).upsert(body).select();
         if(!error) return res.json(m ? data.map(m.desdeDB) : data);
         const colMatch = error.message && error.message.match(/Could not find the '([^']+)' column/);
         if(colMatch) {
@@ -561,7 +611,7 @@ TABLAS.forEach(tabla => {
   // DELETE — soft delete, verificar org_id
   app.delete(`/api/db/${tabla}/:id`, requireAuth, async (req, res) => {
     try {
-      let q = supabase.from(tabla).update({ eliminado: true }).eq('id', req.params.id);
+      let q = getDb(req.orgId).from(tabla).update({ eliminado: true }).eq('id', req.params.id);
       if (req.orgId) q = q.eq('org_id', req.orgId); // solo puede borrar lo suyo
       const { data, error } = await q.select();
       if (error) throw error;
@@ -579,7 +629,7 @@ app.post('/api/db/registros/bulk', requireAuth, async (req, res) => {
     const { alumnoId, registros } = req.body;
     if (!alumnoId || !Array.isArray(registros)) return res.status(400).json({ error: 'alumnoId y registros requeridos' });
     const rows = registros.map(r => ({ ...regParaDB({ ...r, alumnoId }), ...(req.orgId ? { org_id: req.orgId } : {}) }));
-    const { data, error } = await supabase.from('registros').upsert(rows).select();
+    const { data, error } = await getDb(req.orgId).from('registros').upsert(rows).select();
     if (error) throw error;
     res.json({ ok: true, insertados: data.length });
   } catch(e) {
