@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { G, GR, GL, BD, TX, DIAS_L } from '../../constants';
+import { G, GD, GR, GL, BD, TX, DIAS_L } from '../../constants';
 import { hMin, hoy } from '../../utils/helpers';
 import { Tag, Avatar, Card, SecT } from '../ui';
 
@@ -67,13 +67,17 @@ export default function MapaDia({ alumnos, docentes, escuelas, registros, recs, 
   const hayCur = esHoy && evsFiltrados.some(ev=>ev.cur);
 
   useEffect(()=>{
-    if(esHoy && ahoraRef.current) ahoraRef.current.scrollIntoView({behavior:"smooth",block:"center"});
+    if(esHoy && ahoraRef.current) {
+      ahoraRef.current.scrollIntoView({behavior:"smooth",block:"center"});
+    } else {
+      window.scrollTo({top:0,behavior:"smooth"});
+    }
   },[dia]);
 
   return (
     <div style={{padding:"16px 16px 0"}}>
       {/* Header */}
-      <div style={{background:"linear-gradient(135deg,#1a202c,#2d3748)",borderRadius:20,padding:20,marginBottom:16,color:"#fff"}}>
+      <div style={{background:`linear-gradient(135deg,${GD},${GD}ee)`,borderRadius:20,padding:20,marginBottom:16,color:"#fff"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
           <button onClick={()=>onCambioDia&&onCambioDia(DIAS_HAB[Math.max(0,DIAS_HAB.indexOf(dia)-1)])} disabled={dia===1}
             style={{background:"rgba(255,255,255,.1)",border:"none",borderRadius:10,color:dia===1?"rgba(255,255,255,.3)":"#fff",width:36,height:36,fontSize:20,cursor:dia===1?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
