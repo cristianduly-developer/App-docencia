@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FO, BD, G, GR, GL, TX, LIMITE_ALUMNOS, ESC_DEF, DOC_DEF, PRO_DEF, ALU_DEF, REG_DEF, REC_DEF } from './constants';
+import { FO, BD, G, GD, GR, GL, TX, LIMITE_ALUMNOS, ESC_DEF, DOC_DEF, PRO_DEF, ALU_DEF, REG_DEF, REC_DEF, TEMAS_COLOR } from './constants';
 import { hoy, leer, grabar, normAlu } from './utils/helpers';
 import { getSessionToken, setSessionToken } from './utils/session';
 import { DB } from './utils/db';
@@ -234,6 +234,16 @@ export default function App() {
               <button onClick={() => { setMenuUsuario(false); const tel = "542235767784"; const msg = encodeURIComponent(`Hola! Soy ${usuario?.nombre || ""} (${usuario?.email || ""}), necesito ayuda con la app.`); window.open(`https://wa.me/${tel}?text=${msg}`, "_blank"); }} style={{ width: "100%", padding: "12px 16px", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "inherit", color: TX, fontWeight: 700, fontSize: 13, textAlign: "left", borderBottom: "1px solid #f1f5f9" }}>
                 <span>💬</span> Contactar soporte
               </button>
+              <div style={{ padding: "10px 16px", borderBottom: "1px solid #f1f5f9" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: GR, marginBottom: 8 }}>Color de la app</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {TEMAS_COLOR.map(c => {
+                    const activo = (localStorage.getItem("aye_color_tema") || "#2D6A4F") === c.hex;
+                    return <button key={c.hex} title={c.label} onClick={() => { localStorage.setItem("aye_color_tema", c.hex); localStorage.setItem("aye_color_dark", c.dark); window.location.reload(); }}
+                      style={{ width: 24, height: 24, borderRadius: "50%", background: c.hex, border: activo ? `3px solid ${TX}` : "3px solid transparent", cursor: "pointer", padding: 0, outline: "none", boxShadow: activo ? `0 0 0 2px #fff, 0 0 0 3px ${c.hex}` : "none" }} />;
+                  })}
+                </div>
+              </div>
               <button onClick={() => { setMenuUsuario(false); logout(); }} style={{ width: "100%", padding: "12px 16px", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "inherit", color: "#dc2626", fontWeight: 700, fontSize: 13, textAlign: "left" }}>
                 <span>🚪</span> Cerrar sesión
               </button>
@@ -369,7 +379,7 @@ export default function App() {
           {/* ── MI PLAN ── */}
           {pant === "miplan" && (
             <div>
-              <div style={{ background: "linear-gradient(135deg,#1a202c,#2d3748)", padding: "16px 20px", color: "#fff", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ background: `linear-gradient(135deg,${GD},${GD}ee)`, padding: "16px 20px", color: "#fff", display: "flex", alignItems: "center", gap: 12 }}>
                 <button onClick={() => setPant("mapa")} style={{ background: "none", border: "none", color: "rgba(255,255,255,.7)", cursor: "pointer", fontSize: 20, padding: 0, lineHeight: 1 }}>‹</button>
                 <div style={{ fontWeight: 800, fontSize: 18 }}>⭐ Mi Plan</div>
               </div>

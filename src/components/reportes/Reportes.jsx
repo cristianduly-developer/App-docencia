@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { G, GR, GL, BD, TX, DIAS_L } from '../../constants';
+import { G, GD, GR, GL, BD, TX, DIAS_L } from '../../constants';
 import { fmtF, leer, grabar } from '../../utils/helpers';
 import { authHeaders } from '../../utils/session';
 import { appState } from '../../context/AppContext';
@@ -72,10 +72,12 @@ function EditorPPI({ alumno, docentes, escuela, docs, setDoc, generando, setGene
 
   const generarSituacion = async () => {
     setGenerando("ppi_situacion");
-    const hist = regsAlu.slice(0, 8).map(r => `${fmtF(r.fecha)} - ${r.materia}: ${r.avance || "(sin dato)"}`).join("\n") || "Sin registros.";
-    const prompt = `Modelo social PBA 2026. Evitá: dificultad, déficit, problema. Usá: intervención, ajuste razonable, facilitador, trayectoria.\n\nAlumno/a: ${alumno.nombre} | Diagnóstico: ${alumno.diagnostico} | Curso: ${alumno.curso}\nRegistros recientes:\n${hist}\n\nEscribí UN párrafo conciso sobre la situación de aprendizaje actual del alumno/a. Solo el texto, sin títulos.`;
+    const hist = regsAlu.slice(0, 20).map(r => `${fmtF(r.fecha)} - ${r.materia}: ${r.avance || "(sin dato)"}${r.acuerdo ? ` | Acuerdo: ${r.acuerdo}` : ""}`).join("\n") || "Sin registros.";
+    const edad = alumno.fechaNacimiento ? `${Math.floor((Date.now() - new Date(alumno.fechaNacimiento)) / 31557600000)} años` : null;
+    const terapias = (alumno.terapias || []).filter(t => t.nombre).map(t => `${t.nombre} (${t.frecuencia || "-"})`).join(", ") || "Ninguna";
+    const prompt = `Modelo social PBA 2026. Terminología obligatoria — NUNCA usar: dificultad, déficit, problema. USAR: intervención, ajuste razonable, facilitador, trayectoria, BAP.\n\nAlumno/a: ${alumno.nombre}${edad ? ` | ${edad}` : ""} | Curso: ${[alumno.anio, alumno.division].filter(Boolean).join(" ") || alumno.curso || "-"} | Diagnóstico: ${alumno.diagnostico || "-"} | Terapias: ${terapias}\nRegistros:\n${hist}\n\nEscribí UN párrafo narrativo formal sobre la situación de aprendizaje actual. Sin títulos, sin asteriscos, sin guiones, sin markdown. Solo el texto corrido.`;
     try {
-      const res = await fetch("/api/claude", { method: "POST", headers: authHeaders(), body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 400, messages: [{ role: "user", content: prompt }] }) });
+      const res = await fetch("/api/claude", { method: "POST", headers: authHeaders(), body: JSON.stringify({ max_tokens: 500, messages: [{ role: "user", content: prompt }] }) });
       const data = await res.json();
       setDoc("ppi", "situacionActual", data.content?.[0]?.text || "");
     } catch { setDoc("ppi", "situacionActual", "[Error. Completá manualmente.]"); }
@@ -171,13 +173,16 @@ function EditorInforme({ tipo, alumno, escuela, docentes, docs, setDoc, generand
   const generar = async () => {
     const key = `${tipo}_contenido`;
     setGenerando(key);
-    const hist = regsAlu.slice(0, 8).map(r => `${fmtF(r.fecha)} - ${r.materia}: ${r.avance || "(sin dato)"}`).join("\n") || "Sin registros.";
-    const paradigma = "Modelo social PBA 2026. Evitá: dificultad, déficit. Usá: intervención, ajuste razonable, trayectoria.";
+    const hist = regsAlu.slice(0, 20).map(r => `${fmtF(r.fecha)} - ${r.materia}: ${r.avance || "(sin dato)"}${r.acuerdo ? ` | Acuerdo: ${r.acuerdo}` : ""}`).join("\n") || "Sin registros.";
+    const edad = alumno.fechaNacimiento ? `${Math.floor((Date.now() - new Date(alumno.fechaNacimiento)) / 31557600000)} años` : null;
+    const terapias = (alumno.terapias || []).filter(t => t.nombre).map(t => `${t.nombre} (${t.frecuencia || "-"})`).join(", ") || "Ninguna";
+    const paradigma = "Modelo social PBA 2026. Terminología obligatoria — NUNCA usar: dificultad, déficit, problema. USAR: intervención, ajuste razonable, facilitador, trayectoria, BAP.";
+    const perfil = `Alumno/a: ${alumno.nombre}${edad ? ` | ${edad}` : ""} | Curso: ${[alumno.anio, alumno.division].filter(Boolean).join(" ") || alumno.curso || "-"} | Diagnóstico: ${alumno.diagnostico || "-"} | Terapias: ${terapias}`;
     const prompt = tipo === "medio"
-      ? `${paradigma}\nAlumno/a: ${alumno.nombre} | Diagnóstico: ${alumno.diagnostico}\nRegistros:\n${hist}\n\nEscribí un informe narrativo de medio año organizado por materia. Un párrafo por materia. Sin títulos con #.`
-      : `${paradigma}\nAlumno/a: ${alumno.nombre} | Diagnóstico: ${alumno.diagnostico}\nRegistros:\n${hist}\n\nEscribí un informe final anual narrativo con síntesis del recorrido. Sin títulos con #.`;
+      ? `${paradigma}\n\n${perfil}\nRegistros:\n${hist}\n\nEscribí un informe narrativo de medio año organizado por materia. Un párrafo por materia. Sin títulos con #, sin asteriscos, sin guiones, sin tablas. Texto corrido formal en español rioplatense.`
+      : `${paradigma}\n\n${perfil}\nRegistros:\n${hist}\n\nEscribí un informe final anual narrativo con síntesis del recorrido completo. Sin títulos con #, sin asteriscos, sin guiones, sin tablas. Texto corrido formal en español rioplatense.`;
     try {
-      const res = await fetch("/api/claude", { method: "POST", headers: authHeaders(), body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 700, messages: [{ role: "user", content: prompt }] }) });
+      const res = await fetch("/api/claude", { method: "POST", headers: authHeaders(), body: JSON.stringify({ max_tokens: 900, messages: [{ role: "user", content: prompt }] }) });
       const data = await res.json();
       setDoc(tipo, "contenido", data.content?.[0]?.text || "");
     } catch { setDoc(tipo, "contenido", "[Error. Completá manualmente.]"); }
@@ -495,7 +500,7 @@ export default function Reportes({ alumnos, docentes, pros, escuelas, registros,
 
   return (
     <div style={{ paddingBottom: 80, overflowX: "hidden" }}>
-      <div style={{ background: "linear-gradient(135deg,#1a202c,#2d3748)", padding: "16px 20px", color: "#fff" }}>
+      <div style={{ background: `linear-gradient(135deg,${GD},${GD}ee)`, padding: "16px 20px", color: "#fff" }}>
         <div style={{ fontWeight: 800, fontSize: 18 }}>📊 Reportes</div>
       </div>
 

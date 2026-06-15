@@ -66,7 +66,7 @@ app.use(cors({
   }
 }));
 
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '512kb' }));
 app.use(require('express').static(require('path').join(__dirname, 'dist')));
 
 // Cliente global con service key — para operaciones admin y fallback
@@ -489,9 +489,9 @@ app.post('/api/verify-token', async (req, res) => {
     } else {
       // Verificar acceso en el SaaS central
       try {
-        const resultado = await verificarAccesoCentral(email, 'docentes');
-        // La RPC devuelve array — tomamos el primer elemento
+        const resultado = await verificarAccesoCentral(email.toLowerCase().trim(), 'docentes');
         acceso = Array.isArray(resultado) ? (resultado[0] || null) : resultado;
+        console.log(`[verify-token] SaaS resultado para ${email}:`, JSON.stringify(acceso));
       } catch (e) {
         console.error('[verify-token] SaaS central error:', e.message);
         return res.status(503).json({ error: 'No se pudo verificar el acceso. Intentá de nuevo.' });
@@ -507,6 +507,7 @@ app.post('/api/verify-token', async (req, res) => {
           desconocido:      'Tu cuenta no tiene acceso a esta app. Contactá al administrador.',
         };
         const motivo = acceso?.motivo || 'desconocido';
+        console.warn(`[verify-token] Acceso denegado para ${email} — motivo: ${motivo}`);
         return res.status(403).json({ error: motivos[motivo] || `Acceso denegado. Contactá al administrador.` });
       }
 
@@ -514,6 +515,7 @@ app.post('/api/verify-token', async (req, res) => {
 
       // Guard crítico: si no hay org_id la docente vería datos de todos — bloqueamos
       if (!orgId) {
+        console.warn(`[verify-token] Sin org_id para ${email} — acceso bloqueado`);
         return res.status(403).json({ error: 'Tu cuenta no tiene una organización asignada. Contactá al administrador.' });
       }
 
@@ -588,7 +590,7 @@ app.post('/api/claude', requireAuth, async (req, res) => {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model:      'claude-sonnet-4-5',
+        model:      'claude-sonnet-4-6',
         max_tokens: Math.min(req.body.max_tokens || 1000, 2500),
         system:     systemPersonalizado,
         messages:   req.body.messages,

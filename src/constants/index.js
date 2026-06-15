@@ -1,5 +1,16 @@
-// ─── Colores ──────────────────────────────────────────────────
-export const G   = "#2D6A4F";
+// ─── Temas de color ───────────────────────────────────────────
+export const TEMAS_COLOR = [
+  { hex:'#2D6A4F', dark:'#1a3a2a', label:'Verde'      },
+  { hex:'#1D4ED8', dark:'#1e3a8a', label:'Azul'       },
+  { hex:'#EC4899', dark:'#9d174d', label:'Rosa claro' },
+  { hex:'#BE185D', dark:'#831843', label:'Rosa'       },
+  { hex:'#6D28D9', dark:'#4c1d95', label:'Violeta'    },
+  { hex:'#1E293B', dark:'#0f172a', label:'Negro'      },
+];
+
+// ─── Colores activos (leen localStorage al iniciar) ───────────
+export const G   = localStorage.getItem('aye_color_tema') || "#2D6A4F";
+export const GD  = localStorage.getItem('aye_color_dark') || "#1a3a2a";
 export const GR  = "#64748b";
 export const GL  = "#94a3b8";
 export const BD  = "#e2e8f0";

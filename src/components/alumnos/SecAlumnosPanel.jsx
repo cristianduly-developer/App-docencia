@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { G, GR, GL, BD, TX } from '../../constants';
+import { G, GD, GR, GL, BD, TX } from '../../constants';
 import { Card, Confirm } from '../ui';
 
 export default function SecAlumnosPanel({ alumnos, escuelas, onVer, onEditar, onNuevo, onSave, onDelete, onToggleActivo }) {
@@ -19,7 +19,7 @@ export default function SecAlumnosPanel({ alumnos, escuelas, onVer, onEditar, on
       {confirm && <Confirm msg={confirm.msg} onOk={confirm.ok} onNo={() => setConfirm(null)} />}
 
       {/* Header */}
-      <div style={{ background: "linear-gradient(135deg,#2D6A4F,#40916c)", padding: "16px 20px 12px", color: "#fff" }}>
+      <div style={{ background: `linear-gradient(135deg,${GD},${GD}ee)`, padding: "16px 20px 12px", color: "#fff" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: 12, paddingRight: 72 }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 20 }}>👤 Alumnos</div>

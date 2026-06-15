@@ -1,5 +1,5 @@
 import React from 'react';
-import { G, GR, GL, TX, DIAS_L } from '../../constants';
+import { G, GD, GR, GL, TX, DIAS_L } from '../../constants';
 import { hoy, hMin } from '../../utils/helpers';
 import { Card } from '../ui';
 
@@ -28,7 +28,7 @@ export default function ResumenNocturno({ alumnos, docentes, escuelas, registros
 
   return (
     <div style={{ padding: "0 0 80px" }}>
-      <div style={{ background: "linear-gradient(135deg,#1a202c,#2d3748)", padding: "24px 20px 20px", color: "#fff", marginBottom: 16 }}>
+      <div style={{ background: `linear-gradient(135deg,${GD},${GD}ee)`, padding: "24px 20px 20px", color: "#fff", marginBottom: 16 }}>
         <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>{saludo}</div>
         <div style={{ fontSize: 13, color: "rgba(255,255,255,.65)", marginBottom: 6 }}>Resumen del día · {fechaHoy}</div>
         <button onClick={onVerMapa}

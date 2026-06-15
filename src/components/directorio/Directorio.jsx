@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { G, GR, GL, BD, TX, DIAS_L } from '../../constants';
+import { G, GD, GR, GL, BD, TX, DIAS_L } from '../../constants';
 import { uid } from '../../utils/helpers';
 import { Card, Btn, Fld, Sel, SecT, WA, Mail, Confirm } from '../ui';
 
@@ -259,6 +259,9 @@ function FichaEscuela({ escuela, alumnos, docentes, onEditar, onToggleActivo, on
 function FormEscuela({ inicial, escuelas, onSave, onCancel }) {
   const [form, setForm] = useState(() => {
     if (inicial) return {
+      director:'', telefonoDirector:'', mailDirector:'',
+      vicedirector:'', telefonoVicedirector:'', mailVicedirector:'',
+      telefono:'', direccion:'',
       ...inicial,
       turnoDia:   inicial.turnoDia   || defaultTurno(),
       turnoTarde: inicial.turnoTarde || defaultTurno(),
@@ -645,7 +648,7 @@ export default function Directorio({ alumnos, escuelas, docentes, onVer, saveEsc
   ];
   return (
     <div>
-      <div style={{ background:"linear-gradient(135deg,#1a202c,#2d3748)",padding:"16px 20px 0",color:"#fff" }}>
+      <div style={{ background:`linear-gradient(135deg,${GD},${GD}ee)`,padding:"16px 20px 0",color:"#fff" }}>
         <div style={{ fontWeight:800,fontSize:18,marginBottom:12 }}>🏫 Directorio</div>
         <div style={{ display:"flex",gap:0,borderBottom:"2px solid rgba(255,255,255,.1)" }}>
           {SECS.map(s=>(

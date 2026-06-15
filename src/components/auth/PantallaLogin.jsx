@@ -1,12 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { G, GR, GL, TX, FO } from '../../constants';
+import { G, GR, GL, TX, FO, TEMAS_COLOR } from '../../constants';
 import { setSessionToken } from '../../utils/session';
 import { GOOGLE_CLIENT_ID } from '../../constants';
 
 export default function PantallaLogin({ onLogin }) {
-  const [cargando, setCargando] = useState(false);
-  const [error,    setError]    = useState("");
+  const [cargando,    setCargando]    = useState(false);
+  const [error,       setError]       = useState("");
+  const [colorActivo, setColorActivo] = useState(localStorage.getItem('aye_color_tema') || '#2D6A4F');
   const gBtnRef = useRef(null);
+
+  const cambiarColor = (hex) => {
+    const tema = TEMAS_COLOR.find(t => t.hex === hex);
+    localStorage.setItem('aye_color_tema', hex);
+    if (tema) localStorage.setItem('aye_color_dark', tema.dark);
+    window.location.reload();
+  };
 
   useEffect(() => {
     const init = () => {
@@ -79,11 +87,11 @@ export default function PantallaLogin({ onLogin }) {
     }}>
       {/* Fondo decorativo */}
       <div style={{ position:"absolute", top:-80, right:-80, width:260, height:260,
-        borderRadius:"50%", background:"#2D6A4F", opacity:.06 }}/>
+        borderRadius:"50%", background:colorActivo, opacity:.06 }}/>
       <div style={{ position:"absolute", bottom:-60, left:-60, width:200, height:200,
-        borderRadius:"50%", background:"#2D6A4F", opacity:.08 }}/>
+        borderRadius:"50%", background:colorActivo, opacity:.08 }}/>
       <div style={{ position:"absolute", top:"30%", left:-40, width:120, height:120,
-        borderRadius:"50%", background:"#40916c", opacity:.05 }}/>
+        borderRadius:"50%", background:colorActivo, opacity:.05 }}/>
 
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center",
         justifyContent:"center", padding:"40px 32px", position:"relative", zIndex:1 }}>
@@ -92,11 +100,11 @@ export default function PantallaLogin({ onLogin }) {
         <div style={{ marginBottom:40, textAlign:"center" }}>
           <div style={{
             width:80, height:80, borderRadius:"50%",
-            background:"linear-gradient(135deg,#2D6A4F,#40916c)",
+            background:`linear-gradient(135deg,${colorActivo},${colorActivo}bb)`,
             display:"flex", alignItems:"center", justifyContent:"center",
             fontSize:28, fontWeight:800, color:"#fff",
             margin:"0 auto 20px",
-            boxShadow:"0 8px 32px rgba(45,106,79,.25)",
+            boxShadow:`0 8px 32px ${colorActivo}44`,
           }}>📚</div>
           <div style={{ fontSize:22, fontWeight:800, color:TX, marginBottom:6 }}>
             App de Gestión Docente
@@ -107,7 +115,7 @@ export default function PantallaLogin({ onLogin }) {
         </div>
 
         <div style={{ width:48, height:3,
-          background:"linear-gradient(90deg,#2D6A4F,#40916c)", borderRadius:2, marginBottom:40 }}/>
+          background:`linear-gradient(90deg,${colorActivo},${colorActivo}44)`, borderRadius:2, marginBottom:40 }}/>
 
         {/* Beneficios */}
         {[
@@ -156,8 +164,7 @@ export default function PantallaLogin({ onLogin }) {
         </div>
       </div>
 
-      <div style={{ padding:"16px", textAlign:"center", fontSize:11,
-        color:GL, borderTop:`1px solid ${FO}` }}>
+      <div style={{ padding:"12px 16px 16px", borderTop:`1px solid ${FO}`, textAlign:"center", fontSize:11, color:GL }}>
         App de Gestión Docente · Modalidad Especial · 2026
       </div>
     </div>

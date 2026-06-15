@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { G, GR, GL, BD, TX, DIAS, DIAS_L } from '../../constants';
+import { G, GD, GR, GL, BD, TX, DIAS, DIAS_L } from '../../constants';
 import { uid, hoy, fmtF, hMin, leer, grabar } from '../../utils/helpers';
 import { authHeaders } from '../../utils/session';
 import { DB } from '../../utils/db';
@@ -107,11 +107,83 @@ function TabActividades({ alumno, registros, docentes, ec }) {
     .sort((a, b) => b.fecha.localeCompare(a.fecha))
     .slice(0, 8);
 
+  const exportarPDFActividades = (actividades) => {
+    const fechaStr = new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" });
+    const colores = { "Consolidación": "#2563eb", "Avance": "#16a34a", "Extensión": "#ca8a04" };
+    const actHTML = (actividades.actividades || []).map(act => {
+      const c = colores[act.nivel] || ec;
+      return `<div style="border:2px solid ${c};border-radius:12px;margin-bottom:20px;overflow:hidden;page-break-inside:avoid">
+        <div style="background:${c};color:#fff;padding:12px 18px;display:flex;align-items:center;gap:12px">
+          <span style="font-size:24px">${act.emoji}</span>
+          <div>
+            <div style="font-size:11px;opacity:.8;font-weight:700;text-transform:uppercase;letter-spacing:1px">${act.nivel} · ${act.tiempo} min</div>
+            <div style="font-size:17px;font-weight:900">${act.titulo}</div>
+          </div>
+        </div>
+        <div style="padding:14px 18px">
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px">Objetivo</div>
+          <div style="font-size:14px;margin-bottom:12px;line-height:1.5">${act.objetivo}</div>
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px">Cómo realizarla</div>
+          <div style="font-size:14px;margin-bottom:12px;line-height:1.6">${act.descripcion}</div>
+          ${act.adaptaciones ? `<div style="background:#f8fafc;border-radius:8px;padding:10px 14px;border-left:3px solid ${c}">
+            <div style="font-size:11px;font-weight:700;color:${c};text-transform:uppercase;margin-bottom:4px">Adaptación para ${alumno.nombre.split(" ")[0]}</div>
+            <div style="font-size:13px;line-height:1.5">${act.adaptaciones}</div>
+          </div>` : ""}
+        </div>
+      </div>`;
+    }).join("");
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a202c;font-size:14px}
+      .page{max-width:720px;margin:0 auto}
+      .banner{background:${ec};padding:22px 36px 16px;color:#fff}
+      .banner-eye{font-size:10px;letter-spacing:2px;text-transform:uppercase;opacity:.7;margin-bottom:5px}
+      .banner-titulo{font-size:21px;font-weight:900;margin-bottom:2px}
+      .banner-sub{font-size:12px;opacity:.75}
+      .body{padding:22px 36px}
+      .ficha{display:flex;margin-bottom:18px;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0}
+      .ficha-l{background:${ec}12;padding:12px 16px;flex:1}
+      .ficha-r{background:#f8fafc;padding:12px 16px;flex:1;border-left:1.5px solid #e2e8f0}
+      .lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:2px}
+      .val{font-size:13px;font-weight:700;color:#1a202c;margin-bottom:7px}
+      .ctx{background:#f0fdf4;border:1.5px solid ${ec};border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:13px;color:#166534;line-height:1.5}
+      .ctx-lbl{font-size:10px;font-weight:700;color:${ec};text-transform:uppercase;margin-bottom:4px}
+      .footer{margin-top:20px;text-align:center;font-size:10px;color:#cbd5e0;padding-bottom:14px}
+      @media print{@page{margin:1.2cm}}
+    </style></head><body><div class="page">
+      <div class="banner">
+        <div class="banner-eye">Propuesta de actividades · Modalidad Especial DGCyE</div>
+        <div class="banner-titulo">${materiaSeleccionada} — ${alumno.nombre}</div>
+        <div class="banner-sub">${fechaStr}</div>
+      </div>
+      <div class="body">
+        <div class="ficha">
+          <div class="ficha-l">
+            <div class="lbl">Alumno/a</div><div class="val">${alumno.nombre}</div>
+            <div class="lbl">Diagnóstico</div><div class="val">${alumno.diagnostico || "-"}</div>
+          </div>
+          <div class="ficha-r">
+            <div class="lbl">Materia</div><div class="val">${materiaSeleccionada}</div>
+            <div class="lbl">Elaborado por</div><div class="val">${appState.nombreDocente || "AP"}</div>
+          </div>
+        </div>
+        ${actividades.contexto ? `<div class="ctx"><div class="ctx-lbl">Nivel actual en ${materiaSeleccionada}</div>${actividades.contexto}</div>` : ""}
+        ${actHTML}
+        <div class="footer">Res. 1664/17 · DGCyE · Generado con apoyo de IA y revisado por la AP</div>
+      </div>
+    </div></body></html>`;
+    const w = window.open("", "_blank");
+    w.document.write(html); w.document.close(); w.focus();
+    setTimeout(() => w.print(), 500);
+  };
+
   const generarActividades = async () => {
     if (!materiaSeleccionada) return;
     setCargando(true); setError(""); setActividades(null);
+    const edad = alumno.fechaNacimiento ? Math.floor((Date.now() - new Date(alumno.fechaNacimiento)) / 31557600000) + " años" : null;
+    const terapiasStr = (alumno.terapias || []).filter(t => t.nombre).map(t => `${t.nombre} — ${t.profesional || "-"} (${t.frecuencia || "-"})`).join("; ") || "Ninguna";
     const historialResumen = regsMateria.length > 0
-      ? regsMateria.map(r => `• ${fmtF(r.fecha)}: ${r.asistencia}. ${r.avance ? `Avance: ${r.avance}` : "Sin avance."}${r.acuerdo ? ` Acuerdo: ${r.acuerdo}` : ""}`).join("\n")
+      ? regsMateria.map(r => `• ${fmtF(r.fecha)}: ${r.asistencia}. ${r.avance || ""}${r.acuerdo ? ` | Acuerdo: ${r.acuerdo}` : ""}`).join("\n")
       : "Sin registros previos en esta materia.";
     const docenteMateria = docentes.find(d =>
       (alumno.horarios || []).some(h => h.docenteId === d.id) && d.materia === materiaSeleccionada
@@ -120,31 +192,38 @@ function TabActividades({ alumno, registros, docentes, ec }) {
       const res = await fetch("/api/claude", {
         method: "POST", headers: authHeaders(),
         body: JSON.stringify({
-          model: "claude-sonnet-4-5", max_tokens: 1200,
+          max_tokens: 1400,
           messages: [{
             role: "user",
-            content: `Sos una especialista en educación inclusiva y diseño de actividades adaptadas para alumnos con necesidades educativas especiales en Argentina.
+            content: `Sos una AP (Docente de Inclusión) experta en adaptaciones curriculares de Modalidad Especial bonaerense. Tu trabajo es diseñar propuestas de actividades REALMENTE individualizadas, no genéricas.
 
-ALUMNO/A: ${alumno.nombre}
-CURSO: ${alumno.curso}
-DIAGNÓSTICO: ${alumno.diagnostico}
-TERAPIAS ACTUALES: ${(alumno.terapias || []).map(t => `${t.nombre} (${t.frecuencia})`).join(", ") || "Ninguna"}
-MATERIA: ${materiaSeleccionada}
-${docenteMateria ? `DOCENTE: ${docenteMateria.nombre}` : ""}
-${orientacion.trim() ? `\nORIENTACIÓN DE LA DOCENTE INTEGRADORA: ${orientacion.trim()}` : ""}
+═══ PERFIL DEL ALUMNO ═══
+Nombre: ${alumno.nombre}${edad ? ` | ${edad}` : ""}
+Curso: ${[alumno.anio, alumno.division].filter(Boolean).join(" ") || alumno.curso || "-"}
+Diagnóstico: ${alumno.diagnostico || "-"}
+Terapias: ${terapiasStr}
+${docenteMateria ? `Docente de grado: ${docenteMateria.nombre}` : ""}
+${orientacion.trim() ? `Indicación de la AP: ${orientacion.trim()}` : ""}
 
-HISTORIAL RECIENTE DE CLASES:
+═══ HISTORIAL EN ${materiaSeleccionada.toUpperCase()} ═══
 ${historialResumen}
 
-Generá 3 actividades adaptadas para la próxima clase (consolidación, avance, extensión). Sé conciso.
+═══ TU ANÁLISIS ═══
+Antes de generar las actividades, pensá:
+- ¿Qué implica el diagnóstico para aprender ${materiaSeleccionada}? (atención, procesamiento, carga cognitiva, lenguaje)
+- ¿Qué muestran los registros? ¿Qué funciona, qué no, qué acuerdos hay?
+- ¿Qué aportan las terapias a las estrategias? (fonoaudiología → lenguaje; psicomotricidad → motricidad; psicología → regulación)
+- ¿Cuál es el nivel real de este chico/a en esta materia ahora mismo?
+
+Con eso, generá 3 propuestas para la próxima clase.
 
 Respondé ÚNICAMENTE con JSON válido, sin backticks:
 {
-  "contexto": "resumen breve del nivel actual en esta materia",
+  "contexto": "2-3 oraciones sobre el nivel real del alumno en esta materia, basado en los registros y el diagnóstico",
   "actividades": [
-    { "nivel": "Consolidación", "emoji": "🔁", "titulo": "nombre corto", "descripcion": "cómo realizarla (máx 2 oraciones)", "objetivo": "qué trabaja", "tiempo": "X min", "adaptaciones": "ajuste para el diagnóstico (máx 1 oración)" },
-    { "nivel": "Avance", "emoji": "📈", "titulo": "nombre corto", "descripcion": "cómo realizarla (máx 2 oraciones)", "objetivo": "qué trabaja", "tiempo": "X min", "adaptaciones": "ajuste (máx 1 oración)" },
-    { "nivel": "Extensión", "emoji": "⭐", "titulo": "nombre corto", "descripcion": "cómo realizarla (máx 2 oraciones)", "objetivo": "qué trabaja", "tiempo": "X min", "adaptaciones": "ajuste (máx 1 oración)" }
+    { "nivel": "Consolidación", "emoji": "🔁", "titulo": "nombre concreto", "descripcion": "cómo realizarla (2 oraciones máx, lenguaje claro)", "objetivo": "qué habilidad trabaja", "tiempo": "X", "adaptaciones": "ajuste específico para este alumno basado en su diagnóstico (1 oración)" },
+    { "nivel": "Avance", "emoji": "📈", "titulo": "nombre concreto", "descripcion": "cómo realizarla", "objetivo": "qué habilidad trabaja", "tiempo": "X", "adaptaciones": "ajuste específico" },
+    { "nivel": "Extensión", "emoji": "⭐", "titulo": "nombre concreto", "descripcion": "cómo realizarla", "objetivo": "qué habilidad trabaja", "tiempo": "X", "adaptaciones": "ajuste específico" }
   ]
 }`,
           }],
@@ -175,7 +254,7 @@ Respondé ÚNICAMENTE con JSON válido, sin backticks:
   return (
     <div>
       {/* Intro */}
-      <Card sx={{ background: "linear-gradient(135deg,#1a202c,#2d3748)", border: "none" }}>
+      <Card sx={{ background: `linear-gradient(135deg,${GD},${GD}ee)`, border: "none" }}>
         <div style={{ color: "#fff" }}>
           <div style={{ fontSize: 22, marginBottom: 8 }}>✨</div>
           <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>Actividades generadas por IA</div>
@@ -284,12 +363,13 @@ Respondé ÚNICAMENTE con JSON válido, sin backticks:
               </div>
             );
           })}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}>
-            <button onClick={() => { setActividades(null); setOrientacion(""); }} style={{ padding: "12px", borderRadius: 12, border: `2px solid ${BD}`, background: "#fff", color: GR, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>🔄 Generar otras</button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
+            <button onClick={() => exportarPDFActividades(actividades)} style={{ width: "100%", padding: 13, borderRadius: 12, border: "none", background: ec, color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>📄 Exportar PDF</button>
             <button onClick={() => {
-              const texto = `Actividades para ${alumno.nombre} — ${materiaSeleccionada}\n\n${actividades.contexto}\n\n${(actividades.actividades || []).map(a => `${a.emoji} ${a.nivel}: ${a.titulo}\n${a.descripcion}\nAdaptaciones: ${a.adaptaciones}`).join("\n\n")}`;
-              navigator.clipboard?.writeText(texto).then(() => alert("¡Copiado al portapapeles!")).catch(() => alert("Seleccioná el texto y copialo manualmente."));
-            }} style={{ padding: "12px", borderRadius: 12, border: "none", background: ec, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>📋 Copiar texto</button>
+              const txt = `*Propuesta de actividades — ${materiaSeleccionada}*\n*Alumno/a:* ${alumno.nombre}\n\n${actividades.contexto ? `📋 ${actividades.contexto}\n\n` : ""}${(actividades.actividades || []).map(a => `${a.emoji} *${a.nivel}: ${a.titulo}* (${a.tiempo} min)\n${a.descripcion}\n_Adaptación: ${a.adaptaciones}_`).join("\n\n")}`;
+              window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, "_blank");
+            }} style={{ width: "100%", padding: 13, borderRadius: 12, border: "none", background: "#25D366", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>📱 Enviar por WhatsApp</button>
+            <button onClick={() => { setActividades(null); setOrientacion(""); }} style={{ width: "100%", padding: 12, borderRadius: 12, border: `2px solid ${BD}`, background: "#fff", color: GR, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>🔄 Generar otras</button>
           </div>
         </div>
       )}
@@ -315,16 +395,20 @@ function TabDocumentos({ alumno, docentes, escuelas, registros, ec }) {
 
   const generarConClaude = async (tipo) => {
     setGenerando(tipo);
-    const regsA = (registros[alumno.id] || []).filter(r => !r.eliminado).slice(0, 10);
-    const historial = regsA.map(r => `${fmtF(r.fecha)} — ${r.materia}: ${r.avance || "Sin registro."}`).join("\n") || "Sin registros aún.";
-    const paradigma = "Modelo social de la discapacidad, PBA 2026. Evitar: dificultad, problema, déficit. Usar: intervención, ajuste razonable, facilitador, trayectoria.";
+    const regsA = (registros[alumno.id] || []).filter(r => !r.eliminado).sort((a, b) => b.fecha?.localeCompare(a.fecha)).slice(0, 20);
+    const historial = regsA.map(r => `${fmtF(r.fecha)} — ${r.materia}: ${r.avance || "Sin avance."}${r.acuerdo ? ` Acuerdo: ${r.acuerdo}` : ""}`).join("\n") || "Sin registros aún.";
+    const edad = alumno.fechaNacimiento ? `${Math.floor((Date.now() - new Date(alumno.fechaNacimiento)) / 31557600000)} años` : null;
+    const curso = [alumno.anio, alumno.division].filter(Boolean).join(" ") || alumno.curso || "-";
+    const terapias = (alumno.terapias || []).filter(t => t.nombre).map(t => `${t.nombre} (${t.frecuencia || "-"})`).join(", ") || "Ninguna";
+    const paradigma = "Modelo social de la discapacidad, PBA 2026. Terminología obligatoria — NUNCA usar: dificultad, problema, déficit, trastorno. USAR: intervención, ajuste razonable, facilitador, trayectoria, acompañamiento, Barreras al Aprendizaje y la Participación (BAP).";
+    const perfil = `Alumno/a: ${alumno.nombre}${edad ? ` | ${edad}` : ""} | Curso: ${curso} | Diagnóstico: ${alumno.diagnostico || "-"} | Terapias: ${terapias}`;
     const prompts = {
-      ppi:   `${paradigma}\nRedactá en español rioplatense la sección "Situación de aprendizaje actual" del PPI de ${alumno.nombre} (${alumno.diagnostico}, ${alumno.curso}). Historial: ${historial}. Solo el texto, sin título.`,
-      medio: `${paradigma}\nRedactá en español rioplatense el Informe de Medio Año de ${alumno.nombre} (${alumno.diagnostico}). Historial: ${historial}. Narrativo por materia.`,
-      final: `${paradigma}\nRedactá en español rioplatense el Informe Final Anual de ${alumno.nombre} (${alumno.diagnostico}). Historial: ${historial}. Narrativo con síntesis anual.`,
+      ppi:   `${paradigma}\n\n${perfil}\n\nRegistros de clase (más recientes primero):\n${historial}\n\nRedactá en español rioplatense la sección "Situación de aprendizaje actual" del PPI. Un párrafo narrativo, fluido y formal, que describa el recorrido y los apoyos. Sin títulos, sin asteriscos, sin guiones, sin markdown. Solo el texto.`,
+      medio: `${paradigma}\n\n${perfil}\n\nRegistros de clase:\n${historial}\n\nRedactá en español rioplatense el Informe de Medio Año. Párrafos narrativos organizados por materia. Sin títulos con #, sin asteriscos, sin guiones, sin tablas. Texto corrido formal.`,
+      final: `${paradigma}\n\n${perfil}\n\nRegistros de clase:\n${historial}\n\nRedactá en español rioplatense el Informe Final Anual. Párrafos narrativos con síntesis del recorrido anual. Sin títulos con #, sin asteriscos, sin guiones, sin tablas. Texto corrido formal.`,
     };
     try {
-      const res = await fetch("/api/claude", { method: "POST", headers: authHeaders(), body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 800, messages: [{ role: "user", content: prompts[tipo] }] }) });
+      const res = await fetch("/api/claude", { method: "POST", headers: authHeaders(), body: JSON.stringify({ max_tokens: 1000, messages: [{ role: "user", content: prompts[tipo] }] }) });
       const data = await res.json();
       const texto = data.content?.[0]?.text || "";
       if (tipo === "ppi") setDoc("ppi", "situacionActual", texto);
