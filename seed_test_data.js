@@ -5,8 +5,8 @@
 const { createClient } = require('@supabase/supabase-js');
 const { randomUUID } = require('crypto');
 
-const SUPABASE_URL = 'https://wazxnwskfozazsjofugo.supabase.co';
-const SUPABASE_KEY = 'REDACTED';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://wazxnwskfozazsjofugo.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 const ORG_ID = 'fa754111-fd17-426e-a671-f575fcded035';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
