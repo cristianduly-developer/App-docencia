@@ -37,7 +37,7 @@ const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 // ── Cliente Supabase central (SaaS) — service role ────────────
 const stripBOM = s => (s || '').replace(/^﻿/, '').trim();
 const CENTRAL_URL = 'https://ngymvfvlknaltsvsrvjm.supabase.co';
-const CENTRAL_KEY = process.env.CENTRAL_SUPABASE_KEY || 'sb_publishable_XhsLlwmbDz5ne7JoeEoVHw_Qo56KJmd';
+const CENTRAL_KEY = process.env.CENTRAL_SUPABASE_KEY || 'sb_publishable_CJQPQElcEzA9CACfuNllYg_Pe9lwvXy';
 
 async function verificarAccesoCentral(email, appId) {
   const res = await fetch(`${CENTRAL_URL}/rest/v1/rpc/verificar_acceso_email`, {
