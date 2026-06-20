@@ -719,18 +719,29 @@ TONO: Profesional, empático, técnico-pedagógico impecable. El texto debe pode
 app.post('/api/claude', requireAuth, async (req, res) => {
   const emailKey = req.session?.email || req.ip;
   const orgKey   = req.orgId || emailKey;
-  if (await rateLimit(`claude:min:${emailKey}`, 20, 60_000))      // máx 20/min por usuario
+  if (await rateLimit(`claude:min:${emailKey}`, 20, 60_000))
     return res.status(429).json({ error: 'Límite de consultas alcanzado. Esperá un momento.' });
-  if (await rateLimit(`claude:dia:${orgKey}`, 150, 24*60*60_000)) // máx 150/día por org
+  if (await rateLimit(`claude:dia:${orgKey}`, 150, 24*60*60_000))
     return res.status(429).json({ error: 'Límite diario de consultas IA alcanzado.' });
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key no configurada' });
+
+  // Validar estructura de messages — previene prompt injection y mal uso
+  const msgs = req.body.messages;
+  if (!Array.isArray(msgs) || msgs.length === 0 || msgs.length > 10)
+    return res.status(400).json({ error: 'Formato de mensaje inválido.' });
+  for (const m of msgs) {
+    if (!m || typeof m.content !== 'string' || m.content.length > 8000)
+      return res.status(400).json({ error: 'Mensaje demasiado largo o inválido.' });
+    if (!['user','assistant'].includes(m.role))
+      return res.status(400).json({ error: 'Rol de mensaje inválido.' });
+  }
+
   try {
-    // Personalizar el system prompt con el nombre real de la docente
     const nombreDocente = req.session.nombre || 'la Docente de Inclusión';
     const systemPersonalizado = SYSTEM_PERFIL.replace(
       'Ayelén Florentin, Docente de Inclusión (AP)',
-      `${nombreDocente}, Docente de Inclusión (AP)`
+      `${nombreDocente.replace(/[<>]/g, '')}, Docente de Inclusión (AP)`
     );
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -743,7 +754,7 @@ app.post('/api/claude', requireAuth, async (req, res) => {
         model:      'claude-sonnet-4-6',
         max_tokens: Math.min(req.body.max_tokens || 1000, 2500),
         system:     systemPersonalizado,
-        messages:   req.body.messages,
+        messages:   msgs,
       }),
     });
     const data = await response.json();
@@ -767,6 +778,11 @@ TABLAS.forEach(tabla => {
   // GET — lee y convierte snake_case → camelCase, filtrado por org_id
   app.get(`/api/db/${tabla}`, requireAuth, async (req, res) => {
     try {
+      // Cache de 2 min para tablas que cambian poco — ahorra round-trips a Supabase
+      const TABLAS_CACHE = ['escuelas','docentes','profesionales'];
+      if (TABLAS_CACHE.includes(tabla)) {
+        res.set('Cache-Control', 'private, max-age=120');
+      }
       let query = getDb(req.orgId).from(tabla).select('*');
       if (req.orgId) query = query.eq('org_id', req.orgId);
       // Excluir registros borrados — incluye null (registros sin el campo seteado)
@@ -790,6 +806,12 @@ TABLAS.forEach(tabla => {
 
   // POST — convierte camelCase → snake_case, inyecta org_id, auto-strip columnas inexistentes
   app.post(`/api/db/${tabla}`, requireAuth, async (req, res) => {
+    // Validar tamaño del body — previene payloads gigantes
+    if (!req.body || typeof req.body !== 'object')
+      return res.status(400).json({ error: 'Body inválido.' });
+    const bodyStr = JSON.stringify(req.body);
+    if (bodyStr.length > 64_000)
+      return res.status(400).json({ error: 'Payload demasiado grande.' });
     try {
       const m = MAPEO[tabla];
       let body = m ? m.paraDB(req.body) : req.body;

@@ -140,6 +140,18 @@ export default function App() {
     })();
   }, [usuario?.email]);
 
+  // Precargar chunks lazy 3s después del login — navegación instantánea
+  useEffect(() => {
+    if (!usuario) return;
+    const t = setTimeout(() => {
+      import('./components/alumnos/FichaAlumno');
+      import('./components/directorio/Directorio');
+      import('./components/mapa/VistaClase');
+      import('./components/reportes/Reportes');
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [usuario?.email]);
+
   // Persistir cambios localmente
   useEffect(() => { grabar("aye_registros", registros); }, [registros]);
   useEffect(() => { grabar("aye_avisos",    recs);      }, [recs]);
