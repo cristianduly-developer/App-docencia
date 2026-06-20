@@ -1,23 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { FO, BD, G, GD, GR, GL, TX, LIMITE_ALUMNOS, ESC_DEF, DOC_DEF, PRO_DEF, ALU_DEF, REG_DEF, REC_DEF, TEMAS_COLOR } from './constants';
 import { hoy, leer, grabar, normAlu } from './utils/helpers';
 import { getSessionToken, setSessionToken } from './utils/session';
 import { DB } from './utils/db';
 import { AppProvider, appState } from './context/AppContext';
 
-import PantallaLogin    from './components/auth/PantallaLogin';
-import MapaDia          from './components/mapa/MapaDia';
-import MapaFinde        from './components/mapa/MapaFinde';
-import ResumenNocturno  from './components/mapa/ResumenNocturno';
-import VistaClase       from './components/mapa/VistaClase';
-import SecAlumnosPanel  from './components/alumnos/SecAlumnosPanel';
-import FichaAlumno      from './components/alumnos/FichaAlumno';
-import FormAlumno       from './components/alumnos/FormAlumno';
-import Directorio       from './components/directorio/Directorio';
-import Reportes         from './components/reportes/Reportes';
-import Avisos           from './components/alertas/Avisos';
-import CoPilot          from './components/copilot/CoPilot';
-import MiPlan           from './components/miplan/MiPlan';
+// Críticos — carga inmediata
+import PantallaLogin   from './components/auth/PantallaLogin';
+import MapaDia         from './components/mapa/MapaDia';
+import MapaFinde       from './components/mapa/MapaFinde';
+import ResumenNocturno from './components/mapa/ResumenNocturno';
+import SecAlumnosPanel from './components/alumnos/SecAlumnosPanel';
+
+// Lazy — se cargan solo cuando el usuario los necesita
+const VistaClase   = lazy(() => import('./components/mapa/VistaClase'));
+const FichaAlumno  = lazy(() => import('./components/alumnos/FichaAlumno'));
+const FormAlumno   = lazy(() => import('./components/alumnos/FormAlumno'));
+const Directorio   = lazy(() => import('./components/directorio/Directorio'));
+const Reportes     = lazy(() => import('./components/reportes/Reportes'));
+const Avisos       = lazy(() => import('./components/alertas/Avisos'));
+const CoPilot      = lazy(() => import('./components/copilot/CoPilot'));
+const MiPlan       = lazy(() => import('./components/miplan/MiPlan'));
+
+const Cargando = () => (
+  <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding: 40, color: G }}>
+    <div style={{ fontSize: 13, color: GR }}>Cargando...</div>
+  </div>
+);
 
 export default function App() {
   const [storageAlerta, setStorageAlerta] = useState(false);
@@ -307,6 +316,7 @@ export default function App() {
 
         {/* Contenido principal */}
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: 66 }}>
+        <Suspense fallback={<Cargando />}>
 
           {/* ── MAPA ── */}
           {pant === "mapa" && <>
@@ -444,6 +454,7 @@ export default function App() {
             </div>
           )}
 
+        </Suspense>
         </div>
 
         {/* Bottom Navigation */}
