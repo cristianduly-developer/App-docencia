@@ -7,10 +7,12 @@ const crypto   = require('crypto');
 const { createClient }  = require('@supabase/supabase-js');
 const { OAuth2Client }  = require('google-auth-library');
 
-const helmet = require('helmet');
+const helmet      = require('helmet');
+const compression = require('compression');
 const app    = express();
 const PORT   = process.env.PORT || 3000;
 
+app.use(compression());                            // gzip en todas las respuestas
 app.use(helmet({ contentSecurityPolicy: false })); // security headers: HSTS, X-Frame-Options, etc.
 
 // ── Rate limiting persistente via Supabase ───────────────────
@@ -723,6 +725,8 @@ app.post('/api/claude', requireAuth, async (req, res) => {
     return res.status(429).json({ error: 'Límite de consultas alcanzado. Esperá un momento.' });
   if (await rateLimit(`claude:dia:${orgKey}`, 150, 24*60*60_000))
     return res.status(429).json({ error: 'Límite diario de consultas IA alcanzado.' });
+  if (await rateLimit(`claude:mes:${orgKey}`, 2000, 30*24*60*60_000))
+    return res.status(429).json({ error: 'Límite mensual de consultas IA alcanzado. Contactá al administrador.' });
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key no configurada' });
 
