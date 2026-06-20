@@ -223,7 +223,7 @@ export default function App() {
             </div>
           </button>
           {menuUsuario && (
-            <div style={{ position: "absolute", top: 44, right: 0, background: "#fff", borderRadius: 14, boxShadow: "0 8px 32px rgba(0,0,0,.15)", border: "1px solid #e2e8f0", minWidth: 180, overflow: "hidden", zIndex: 501 }}>
+            <div style={{ position: "fixed", top: 56, right: 12, bottom: 80, background: "#fff", borderRadius: 14, boxShadow: "0 8px 32px rgba(0,0,0,.15)", border: "1px solid #e2e8f0", minWidth: 180, zIndex: 501, overflowY: "auto" }}>
               <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid #f1f5f9" }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: TX }}>{usuario?.nombre || "Usuario"}</div>
                 <div style={{ fontSize: 11, color: GR, marginTop: 2 }}>{usuario?.email || ""}</div>
@@ -273,6 +273,7 @@ export default function App() {
                 ? <MapaFinde
                     alumnos={alumnos} docentes={docentes} escuelas={escuelas}
                     recs={recs} registros={registros} diaReal={DIA_REAL} fechaHoy={FECHA_HOY}
+                    nombreCorto={nombreCorto}
                     onVerMapa={() => { setForceMapaDia(true); setDiaVista(1); }}
                   />
                 : DIA_REAL >= 1 && DIA_REAL <= 5 && MIN >= 18 * 60 && !forceMapaDia
@@ -280,6 +281,7 @@ export default function App() {
                       alumnos={alumnos} docentes={docentes} escuelas={escuelas}
                       registros={registros} recs={recs}
                       diaReal={DIA_REAL} fechaHoy={FECHA_HOY}
+                      nombreCorto={nombreCorto}
                       onVerMapa={() => setForceMapaDia(true)}
                     />
                   : <MapaDia

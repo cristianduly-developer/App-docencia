@@ -3,7 +3,7 @@ import { G, GD, GR, GL, TX, DIAS_L } from '../../constants';
 import { hoy, hMin } from '../../utils/helpers';
 import { Card } from '../ui';
 
-export default function ResumenNocturno({ alumnos, docentes, escuelas, registros, recs, diaReal, fechaHoy, onVerMapa }) {
+export default function ResumenNocturno({ alumnos, docentes, escuelas, registros, recs, diaReal, fechaHoy, nombreCorto, onVerMapa }) {
   const hoyStr = hoy();
   const diasSig = diaReal === 5 ? null : diaReal + 1;
 
@@ -23,7 +23,8 @@ export default function ResumenNocturno({ alumnos, docentes, escuelas, registros
       }).sort((a, b) => hMin(a.horaInicio) - hMin(b.horaInicio))
     : [];
 
-  const saludos = ["¡Buen cierre del día, Aye! 🌙", "¡Excelente jornada, Aye! ✨", "¡Ya terminó el día, Aye! 🌿"];
+  const n = nombreCorto || '';
+  const saludos = [`¡Buen cierre del día, ${n}! 🌙`, `¡Excelente jornada, ${n}! ✨`, `¡Ya terminó el día, ${n}! 🌿`];
   const saludo = saludos[new Date().getDay() % saludos.length];
 
   return (
@@ -97,7 +98,7 @@ export default function ResumenNocturno({ alumnos, docentes, escuelas, registros
           : <Card sx={{ textAlign: "center", padding: 20, marginTop: 20 }}>
               <div style={{ fontSize: 24, marginBottom: 8 }}>🎉</div>
               <div style={{ fontWeight: 700, color: TX }}>¡Mañana es finde!</div>
-              <div style={{ fontSize: 12, color: GR, marginTop: 4 }}>Descansá, Aye. Te lo merecés.</div>
+              <div style={{ fontSize: 12, color: GR, marginTop: 4 }}>Descansá{n ? `, ${n}` : ''}. Te lo merecés.</div>
             </Card>
         }
       </div>

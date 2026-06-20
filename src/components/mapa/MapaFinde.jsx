@@ -3,9 +3,9 @@ import { G, GD, GR, GL, BD, TX, DIAS_L } from '../../constants';
 import { hoy, hMin } from '../../utils/helpers';
 import { Card } from '../ui';
 
-export default function MapaFinde({ alumnos, docentes, escuelas, recs, registros, diaReal, fechaHoy, onVerMapa }) {
+export default function MapaFinde({ alumnos, docentes, escuelas, recs, registros, diaReal, fechaHoy, nombreCorto, onVerMapa }) {
   const esSab = diaReal === 6;
-  const saludo = esSab ? "¡Buen sábado, Aye! 🌿" : "¡Buen domingo, Aye! ☀️";
+  const saludo = esSab ? `¡Buen sábado, ${nombreCorto || ''}! 🌿` : `¡Buen domingo, ${nombreCorto || ''}! ☀️`;
   const subtitulo = esSab ? "Acá va un resumen para que arranques el finde tranquila." : "Mañana arranca otra semana. Repasá lo que viene.";
   const hoyStr = hoy();
   const activos = alumnos.filter(a => !a.eliminado && a.activo !== false);
