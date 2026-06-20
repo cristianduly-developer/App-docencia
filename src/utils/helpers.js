@@ -25,5 +25,12 @@ export const leer = (key, def) => {
 };
 
 export const grabar = (key, val) => {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  try {
+    localStorage.setItem(key, JSON.stringify(val));
+  } catch(e) {
+    console.error(`[storage] Error al guardar "${key}":`, e.message);
+    if (e.name === 'QuotaExceededError') {
+      window.dispatchEvent(new CustomEvent('aye:storage-lleno'));
+    }
+  }
 };

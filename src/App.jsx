@@ -20,6 +20,14 @@ import CoPilot          from './components/copilot/CoPilot';
 import MiPlan           from './components/miplan/MiPlan';
 
 export default function App() {
+  const [storageAlerta, setStorageAlerta] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setStorageAlerta(true);
+    window.addEventListener('aye:storage-lleno', handler);
+    return () => window.removeEventListener('aye:storage-lleno', handler);
+  }, []);
+
   // ── Autenticación ──────────────────────────────────────────
   const [usuario, setUsuario] = useState(() => {
     const u = leer("aye_sesion", null);
@@ -205,6 +213,13 @@ export default function App() {
   return (
     <AppProvider>
       <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: FO, fontFamily: "'Georgia',serif", display: "flex", flexDirection: "column" }}>
+
+        {/* Banner storage lleno */}
+        {storageAlerta && (
+          <div style={{ background: "#dc2626", color: "#fff", padding: "8px 16px", fontSize: 13, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            ⚠️ <strong>Almacenamiento lleno.</strong> Algunos datos podrían no guardarse. Contactá soporte.
+          </div>
+        )}
 
         {/* Banner demo */}
         {esDemo && (

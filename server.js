@@ -7,8 +7,11 @@ const crypto   = require('crypto');
 const { createClient }  = require('@supabase/supabase-js');
 const { OAuth2Client }  = require('google-auth-library');
 
+const helmet = require('helmet');
 const app    = express();
 const PORT   = process.env.PORT || 3000;
+
+app.use(helmet({ contentSecurityPolicy: false })); // security headers: HSTS, X-Frame-Options, etc.
 
 // ── Rate limiting persistente via Supabase ───────────────────
 // Usa tabla rate_limits en Supabase — persiste entre invocaciones serverless
@@ -63,10 +66,12 @@ async function verificarAccesoCentral(email, appId) {
   return data;
 }
 
-// ── CORS: solo dominios permitidos ───────────────────────────
+// ── CORS: dominios permitidos (agregar en env var ALLOWED_ORIGINS separados por coma) ──
+const ORIGINS_EXTRA = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
 const ORIGINS_PERMITIDOS = [
   'https://aye-app-one.vercel.app',
-  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : []),
+  ...ORIGINS_EXTRA,
+  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000', 'http://localhost:5173'] : []),
 ];
 app.use(cors({
   origin: (origin, cb) => {
@@ -110,7 +115,8 @@ function getDb(orgId) {
       auth:   { persistSession: false },
     });
   }
-  return supabase; // fallback: service key (admin sin org o env vars no configuradas)
+  if (!process.env.SUPABASE_KEY) throw new Error('SUPABASE_KEY no configurada — no se puede operar sin credenciales');
+  return supabase; // fallback: service key solo si RLS no está disponible
 }
 
 // ── Admins globales del sistema ───────────────────────────────
@@ -118,7 +124,7 @@ const ADMINS = (process.env.ADMIN_EMAILS || 'cristianduly@gmail.com')
   .split(',').map(e => e.trim()).filter(Boolean);
 
 // ── Token HMAC firmado — sin estado en servidor (funciona en serverless) ──
-const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 horas
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 horas — jornada docente completa
 const SESSION_SECRET = process.env.SESSION_SECRET;
 if (!SESSION_SECRET) throw new Error('SESSION_SECRET env var es requerida');
 
@@ -712,8 +718,11 @@ TONO: Profesional, empático, técnico-pedagógico impecable. El texto debe pode
 
 app.post('/api/claude', requireAuth, async (req, res) => {
   const emailKey = req.session?.email || req.ip;
-  if (await rateLimit(`claude:${emailKey}`, 20, 60_000)) // máx 20 llamadas por minuto por usuario
+  const orgKey   = req.orgId || emailKey;
+  if (await rateLimit(`claude:min:${emailKey}`, 20, 60_000))      // máx 20/min por usuario
     return res.status(429).json({ error: 'Límite de consultas alcanzado. Esperá un momento.' });
+  if (await rateLimit(`claude:dia:${orgKey}`, 150, 24*60*60_000)) // máx 150/día por org
+    return res.status(429).json({ error: 'Límite diario de consultas IA alcanzado.' });
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key no configurada' });
   try {
@@ -799,12 +808,11 @@ TABLAS.forEach(tabla => {
           body = resto;
           continue;
         }
-        // FK constraint → poner a null el campo FK y reintentar
+        // FK constraint — no silenciar, devolver error claro al cliente
         const fkMatch = error.message && error.message.match(/violates foreign key constraint/);
         if(fkMatch) {
-          console.warn(`[DB] FK constraint en '${tabla}', limpiando escuela_id`);
-          body = { ...body, escuela_id: null };
-          continue;
+          console.error(`[DB] FK constraint en '${tabla}':`, error.message);
+          return res.status(400).json({ error: 'Referencia inválida — verificá que la escuela o docente exista.' });
         }
         throw error;
       }
