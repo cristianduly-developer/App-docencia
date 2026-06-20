@@ -48,12 +48,13 @@ const centralAdmin = () => CENTRAL_SERVICE_KEY
   : null;
 
 async function verificarAccesoCentral(email, appId) {
+  const key = CENTRAL_SERVICE_KEY || CENTRAL_KEY;
   const res = await fetch(`${CENTRAL_URL}/rest/v1/rpc/verificar_acceso_email`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'apikey': CENTRAL_KEY,
-      'Authorization': `Bearer ${CENTRAL_KEY}`,
+      'apikey': key,
+      'Authorization': `Bearer ${key}`,
     },
     body: JSON.stringify({ email_param: email, app_id_param: appId }),
   });
