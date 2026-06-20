@@ -38,7 +38,7 @@ const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 const stripBOM = s => (s || '').replace(/^﻿/, '').trim();
 const CENTRAL_URL         = 'https://ngymvfvlknaltsvsrvjm.supabase.co';
 const CENTRAL_KEY         = process.env.CENTRAL_SUPABASE_KEY || 'sb_publishable_CJQPQElcEzA9CACfuNllYg_Pe9lwvXy';
-const CENTRAL_SERVICE_KEY = process.env.CENTRAL_SERVICE_KEY  || '';
+const CENTRAL_SERVICE_KEY = process.env.CENTRAL_SUPABASE_SERVICE_KEY || process.env.CENTRAL_SERVICE_KEY || '';
 const DEMO_DIAS           = 28;
 const APP_ID_DOCENTE      = 'docentes';
 const OWNER_ID            = 'd8eef2e2-7e07-4ec9-9c6e-766addf89cc5';
