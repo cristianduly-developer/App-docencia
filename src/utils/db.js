@@ -15,6 +15,7 @@ export const DB = {
         window.dispatchEvent(new CustomEvent('aye:save-error', { detail: { tabla, msg: err?.error } }));
         return;
       }
+      window.dispatchEvent(new CustomEvent('aye:save-ok'));
       return; // guardado OK en servidor — no necesita localStorage
     } catch (e) {
       console.error(`[DB.save] ${tabla} fetch error:`, e.message);
