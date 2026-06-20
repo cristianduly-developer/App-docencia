@@ -28,6 +28,18 @@ export default function App() {
     return () => window.removeEventListener('aye:storage-lleno', handler);
   }, []);
 
+  useEffect(() => {
+    const handler = (e) => {
+      const msg = e.detail?.offline
+        ? 'Sin conexión — el cambio se guardó localmente y se sincronizará cuando vuelva la red.'
+        : (e.detail?.msg || 'Error al guardar. Intentá de nuevo.');
+      setErrorSync(msg);
+      setTimeout(() => setErrorSync(null), 6000);
+    };
+    window.addEventListener('aye:save-error', handler);
+    return () => window.removeEventListener('aye:save-error', handler);
+  }, []);
+
   // ── Autenticación ──────────────────────────────────────────
   const [usuario, setUsuario] = useState(() => {
     const u = leer("aye_sesion", null);
@@ -78,25 +90,36 @@ export default function App() {
   const [alumnos,   setAlumnos]   = useState(() => leer("aye_alumnos",       ALU_DEF).map(normAlu));
   const [registros, setRegistros] = useState(() => leer("aye_registros",     REG_DEF));
   const [recs,      setRecs]      = useState(() => leer("aye_avisos",        REC_DEF));
+  const [sincronizando, setSincronizando] = useState(false);
+  const [errorSync,     setErrorSync]     = useState(null);
 
   // Sync con Supabase al iniciar
   useEffect(() => {
     if (!usuario) return;
+    setSincronizando(true);
+    setErrorSync(null);
     (async () => {
-      const [esc, doc, pro, alu, regs, avs] = await Promise.all([
-        DB.load("escuelas",      ESC_DEF),
-        DB.load("docentes",      DOC_DEF),
-        DB.load("profesionales", PRO_DEF),
-        DB.load("alumnos",       ALU_DEF),
-        DB.load("registros",     REG_DEF),
-        DB.load("avisos",        REC_DEF),
-      ]);
-      setEscuelas(esc);
-      setDocentes(doc);
-      setPros(pro);
-      setAlumnos(alu.map(normAlu));
-      setRegistros(regs);
-      setRecs(avs);
+      try {
+        const [esc, doc, pro, alu, regs, avs] = await Promise.all([
+          DB.load("escuelas",      ESC_DEF),
+          DB.load("docentes",      DOC_DEF),
+          DB.load("profesionales", PRO_DEF),
+          DB.load("alumnos",       ALU_DEF),
+          DB.load("registros",     REG_DEF),
+          DB.load("avisos",        REC_DEF),
+        ]);
+        setEscuelas(esc);
+        setDocentes(doc);
+        setPros(pro);
+        setAlumnos(alu.map(normAlu));
+        setRegistros(regs);
+        setRecs(avs);
+      } catch(e) {
+        console.error('[sync]', e.message);
+        setErrorSync('No se pudo sincronizar con el servidor. Trabajando con datos locales.');
+      } finally {
+        setSincronizando(false);
+      }
     })();
   }, [usuario?.email]);
 
@@ -213,6 +236,21 @@ export default function App() {
   return (
     <AppProvider>
       <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: FO, fontFamily: "'Georgia',serif", display: "flex", flexDirection: "column" }}>
+
+        {/* Banner sincronizando */}
+        {sincronizando && (
+          <div style={{ background: G, color: "#fff", padding: "6px 16px", fontSize: 12, textAlign: "center" }}>
+            🔄 Sincronizando datos...
+          </div>
+        )}
+
+        {/* Banner error sync */}
+        {errorSync && !sincronizando && (
+          <div style={{ background: "#f59e0b", color: "#1c1917", padding: "6px 16px", fontSize: 12, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span>⚠️ {errorSync}</span>
+            <button onClick={() => setErrorSync(null)} style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, color: "#1c1917" }}>✕</button>
+          </div>
+        )}
 
         {/* Banner storage lleno */}
         {storageAlerta && (

@@ -12,9 +12,13 @@ export const DB = {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error(`[DB.save] ${tabla}:`, err?.error || res.status);
+        window.dispatchEvent(new CustomEvent('aye:save-error', { detail: { tabla, msg: err?.error } }));
+        return;
       }
+      return; // guardado OK en servidor — no necesita localStorage
     } catch (e) {
       console.error(`[DB.save] ${tabla} fetch error:`, e.message);
+      window.dispatchEvent(new CustomEvent('aye:save-error', { detail: { tabla, offline: true } }));
     }
     // localStorage fallback (no alumnos — datos sensibles)
     if (!["alumnos"].includes(tabla)) {
