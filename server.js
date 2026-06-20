@@ -678,7 +678,9 @@ app.post('/api/registrar-demo', async (req, res) => {
             </table>`,
         }),
       });
-    } catch {}
+    } catch (mailErr) {
+      console.error('[registrar-demo] Error Resend:', mailErr?.message || mailErr);
+    }
 
     console.log(`[registrar-demo] Demo creado para ${email} — org ${orgId}`);
     res.json({ ok: true });
