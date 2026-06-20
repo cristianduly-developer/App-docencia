@@ -34,10 +34,18 @@ async function rateLimit(key, maxReqs, windowMs) {
 const GOOGLE_CLIENT_ID = "117583093488-94tk32l3502mj4c3vff7fci9oclcvvhn.apps.googleusercontent.com";
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-// ── Cliente Supabase central (SaaS) — service role ────────────
+// ── Cliente Supabase central (SaaS) ───────────────────────────
 const stripBOM = s => (s || '').replace(/^﻿/, '').trim();
-const CENTRAL_URL = 'https://ngymvfvlknaltsvsrvjm.supabase.co';
-const CENTRAL_KEY = process.env.CENTRAL_SUPABASE_KEY || 'sb_publishable_CJQPQElcEzA9CACfuNllYg_Pe9lwvXy';
+const CENTRAL_URL         = 'https://ngymvfvlknaltsvsrvjm.supabase.co';
+const CENTRAL_KEY         = process.env.CENTRAL_SUPABASE_KEY || 'sb_publishable_CJQPQElcEzA9CACfuNllYg_Pe9lwvXy';
+const CENTRAL_SERVICE_KEY = process.env.CENTRAL_SERVICE_KEY  || '';
+const DEMO_DIAS           = 28;
+const APP_ID_DOCENTE      = 'docentes';
+const OWNER_ID            = 'd8eef2e2-7e07-4ec9-9c6e-766addf89cc5';
+
+const centralAdmin = () => CENTRAL_SERVICE_KEY
+  ? createClient(CENTRAL_URL, CENTRAL_SERVICE_KEY)
+  : null;
 
 async function verificarAccesoCentral(email, appId) {
   const res = await fetch(`${CENTRAL_URL}/rest/v1/rpc/verificar_acceso_email`, {
@@ -498,17 +506,38 @@ app.post('/api/verify-token', async (req, res) => {
       }
 
       if (!acceso || !acceso.tiene_acceso) {
-        const motivos = {
-          sin_cuenta:       'Tu cuenta no está registrada en el sistema.',
-          sin_organizacion: 'No tenés una organización asignada. Contactá al administrador.',
-          sin_suscripcion:  'No tenés una suscripción activa para esta app.',
-          impago:           'Tu suscripción está vencida. Contactá al administrador.',
-          suspendido:       'Tu acceso está suspendido. Contactá al administrador.',
-          desconocido:      'Tu cuenta no tiene acceso a esta app. Contactá al administrador.',
-        };
-        const motivo = acceso?.motivo || 'desconocido';
-        console.warn(`[verify-token] Acceso denegado para ${email} — motivo: ${motivo}`);
-        return res.status(403).json({ error: motivos[motivo] || `Acceso denegado. Contactá al administrador.` });
+        // Demo vencido: tiene suscripción pero expiró
+        if (acceso && acceso.estado === 'demo' && (acceso.dias_restantes ?? 0) <= 0) {
+          return res.status(403).json({ code: 'demo_vencido', error: 'Tu período de prueba venció.', email, nombre: payload.name });
+        }
+        if (acceso && acceso.estado === 'impago') {
+          return res.status(403).json({ code: 'impago', error: 'Tu suscripción está vencida.', email, nombre: payload.name });
+        }
+        // Sin cuenta — verificar si está suspendido (el RPC filtra suspendidos)
+        const central = centralAdmin();
+        if (central) {
+          const { data: empData } = await central
+            .from('empleados_organizacion')
+            .select('org_id')
+            .eq('email', email)
+            .limit(1);
+          if (empData?.length > 0) {
+            const { data: subData } = await central
+              .from('suscripciones_apps')
+              .select('estado')
+              .eq('org_id', empData[0].org_id)
+              .eq('app_id', APP_ID_DOCENTE)
+              .in('estado', ['suspendido', 'impago'])
+              .limit(1)
+              .maybeSingle();
+            if (subData?.estado) {
+              return res.status(403).json({ code: subData.estado, error: 'Tu acceso está suspendido. Contactá al administrador.', email, nombre: payload.name });
+            }
+          }
+        }
+        // Usuario nuevo sin cuenta
+        console.warn(`[verify-token] Sin cuenta para ${email}`);
+        return res.status(403).json({ code: 'sin_cuenta', error: 'Sin cuenta', email, nombre: payload.name });
       }
 
       orgId = acceso.ret_org_id || acceso.org_id || null;
@@ -546,6 +575,96 @@ app.post('/api/verify-token', async (req, res) => {
   } catch (e) {
     console.error('[verify-token]', e.message);
     res.status(401).json({ error: 'Token de Google inválido o expirado.' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// Registro demo automático
+// ══════════════════════════════════════════════════════════════
+app.post('/api/registrar-demo', async (req, res) => {
+  try {
+    const { credential } = req.body || {};
+    if (!credential) return res.status(400).json({ ok: false, error: 'no_credential' });
+
+    let ticket;
+    try {
+      ticket = await googleClient.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID });
+    } catch {
+      return res.status(401).json({ ok: false, error: 'token_invalido' });
+    }
+    const payload = ticket.getPayload();
+    const email = (payload.email || '').toLowerCase().trim();
+
+    const central = centralAdmin();
+    if (!central) {
+      console.error('[registrar-demo] CENTRAL_SERVICE_KEY no configurada');
+      return res.status(500).json({ ok: false, error: 'config_error' });
+    }
+
+    // ¿Ya tiene org?
+    const { data: orgsExistentes } = await central
+      .from('organizaciones')
+      .select('id')
+      .eq('email_contacto', email)
+      .limit(1);
+
+    let orgId;
+    if (orgsExistentes?.length > 0) {
+      orgId = orgsExistentes[0].id;
+      const { data: subExistente } = await central
+        .from('suscripciones_apps')
+        .select('id')
+        .eq('org_id', orgId)
+        .eq('app_id', APP_ID_DOCENTE)
+        .limit(1)
+        .maybeSingle();
+      if (subExistente) return res.json({ ok: true, ya_existe: true });
+    } else {
+      const nombre = payload.name || email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const { data: org, error: orgErr } = await central
+        .from('organizaciones')
+        .insert({ nombre, email_contacto: email, owner_id: OWNER_ID })
+        .select('id')
+        .single();
+      if (orgErr || !org) {
+        console.error('[registrar-demo] Error creando org:', orgErr);
+        return res.status(500).json({ ok: false, error: 'error_central' });
+      }
+      orgId = org.id;
+    }
+
+    await central
+      .from('empleados_organizacion')
+      .upsert({ org_id: orgId, email }, { onConflict: 'org_id,email', ignoreDuplicates: true });
+
+    const hoy = new Date().toISOString().slice(0, 10);
+    const vencimiento = new Date(Date.now() + DEMO_DIAS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const { error: subErr } = await central
+      .from('suscripciones_apps')
+      .insert({
+        org_id:            orgId,
+        app_id:            APP_ID_DOCENTE,
+        plan:              'profesional',
+        estado:            'demo',
+        fecha_inicio_demo: hoy,
+        limite_demo_dias:  DEMO_DIAS,
+        fecha_vencimiento: vencimiento,
+      });
+
+    if (subErr) {
+      console.error('[registrar-demo] Error suscripción:', subErr);
+      return res.status(500).json({ ok: false, error: 'error_central' });
+    }
+
+    try {
+      await central.from('notificaciones_admin').insert({ org_id: orgId, tipo: 'nueva_org', app_id: APP_ID_DOCENTE });
+    } catch {}
+
+    console.log(`[registrar-demo] Demo creado para ${email} — org ${orgId}`);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[registrar-demo]', e.message);
+    res.status(500).json({ ok: false, error: 'interno' });
   }
 });
 
