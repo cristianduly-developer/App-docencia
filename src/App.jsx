@@ -4,6 +4,7 @@ import { hoy, leer, grabar, normAlu } from './utils/helpers';
 import { getSessionToken, setSessionToken } from './utils/session';
 import { DB } from './utils/db';
 import { AppProvider, appState } from './context/AppContext';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 
 // Críticos — carga inmediata
 import PantallaLogin   from './components/auth/PantallaLogin';
@@ -92,17 +93,17 @@ export default function App() {
     return () => { ["click", "touchstart", "keydown"].forEach(ev => window.removeEventListener(ev, reg)); clearInterval(t); };
   }, [usuario]);
 
-  // ── Datos maestros ─────────────────────────────────────────
-  const [escuelas,  setEscuelas]  = useState(() => leer("aye_escuelas",      ESC_DEF));
-  const [docentes,  setDocentes]  = useState(() => leer("aye_docentes",      DOC_DEF));
-  const [pros,      setPros]      = useState(() => leer("aye_profesionales", PRO_DEF));
-  const [alumnos,   setAlumnos]   = useState(() => leer("aye_alumnos",       ALU_DEF).map(normAlu));
-  const [registros, setRegistros] = useState(() => leer("aye_registros",     REG_DEF));
-  const [recs,      setRecs]      = useState(() => leer("aye_avisos",        REC_DEF));
+  // ── Datos maestros — vacíos hasta que llegue Supabase ───────
+  const [escuelas,  setEscuelas]  = useState([]);
+  const [docentes,  setDocentes]  = useState([]);
+  const [pros,      setPros]      = useState([]);
+  const [alumnos,   setAlumnos]   = useState([]);
+  const [registros, setRegistros] = useState({});
+  const [recs,      setRecs]      = useState([]);
   const [sincronizando, setSincronizando] = useState(false);
   const [errorSync,     setErrorSync]     = useState(null);
 
-  // Sync con Supabase al iniciar
+  // Sync con Supabase al iniciar — DB es la fuente de verdad
   useEffect(() => {
     if (!usuario) return;
     setSincronizando(true);
@@ -125,7 +126,14 @@ export default function App() {
         setRecs(avs);
       } catch(e) {
         console.error('[sync]', e.message);
-        setErrorSync('No se pudo sincronizar con el servidor. Trabajando con datos locales.');
+        // Fallback a localStorage si el servidor no responde
+        setEscuelas(leer("aye_escuelas",      ESC_DEF));
+        setDocentes(leer("aye_docentes",      DOC_DEF));
+        setPros(leer("aye_profesionales",     PRO_DEF));
+        setAlumnos(leer("aye_alumnos",        ALU_DEF).map(normAlu));
+        setRegistros(leer("aye_registros",    REG_DEF));
+        setRecs(leer("aye_avisos",            REC_DEF));
+        setErrorSync('Sin conexión — mostrando datos guardados localmente.');
       } finally {
         setSincronizando(false);
       }
@@ -229,6 +237,18 @@ export default function App() {
 
   if (!usuario) return <PantallaLogin onLogin={login} />;
 
+  if (sincronizando) return (
+    <div style={{ maxWidth:480, margin:"0 auto", minHeight:"100vh", background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, fontFamily:"Georgia,serif" }}>
+      <div style={{ fontSize:48 }}>📚</div>
+      <div style={{ fontWeight:800, fontSize:18, color: G }}>Cargando tu app...</div>
+      <div style={{ fontSize:13, color: GR }}>Sincronizando datos desde el servidor</div>
+      <div style={{ width:200, height:4, background:"#e2e8f0", borderRadius:4, overflow:"hidden", marginTop:8 }}>
+        <div style={{ width:"60%", height:"100%", background: G, borderRadius:4, animation:"pulse 1.5s ease-in-out infinite" }} />
+      </div>
+      <style>{`@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }`}</style>
+    </div>
+  );
+
   const esDemo = usuario?.acceso?.estado === 'demo';
   const diasDemo = usuario?.acceso?.diasRestantes ?? null;
   const nombreCorto = (usuario?.nombre || "").split(" ")[0] || "Usuario";
@@ -316,6 +336,7 @@ export default function App() {
 
         {/* Contenido principal */}
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: 66 }}>
+        <ErrorBoundary>
         <Suspense fallback={<Cargando />}>
 
           {/* ── MAPA ── */}
@@ -455,6 +476,7 @@ export default function App() {
           )}
 
         </Suspense>
+        </ErrorBoundary>
         </div>
 
         {/* Bottom Navigation */}
