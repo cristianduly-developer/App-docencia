@@ -611,63 +611,25 @@ app.post('/api/registrar-demo', async (req, res) => {
       return res.status(500).json({ ok: false, error: 'config_error' });
     }
 
-    // ¿Ya tiene org?
-    const { data: orgsExistentes } = await central
-      .from('organizaciones')
-      .select('id')
-      .eq('email_contacto', email)
-      .limit(1);
+    const nombre = payload.name || email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const { data: rpcResult, error: rpcErr } = await central.rpc('registrar_demo', {
+      p_email:     email,
+      p_nombre:    nombre,
+      p_app_id:    APP_ID_DOCENTE,
+      p_owner_id:  OWNER_ID,
+      p_demo_dias: DEMO_DIAS,
+    });
 
-    let orgId;
-    if (orgsExistentes?.length > 0) {
-      orgId = orgsExistentes[0].id;
-      const { data: subExistente } = await central
-        .from('suscripciones_apps')
-        .select('id')
-        .eq('org_id', orgId)
-        .eq('app_id', APP_ID_DOCENTE)
-        .limit(1)
-        .maybeSingle();
-      if (subExistente) return res.json({ ok: true, ya_existe: true });
-    } else {
-      const nombre = payload.name || email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      const { data: org, error: orgErr } = await central
-        .from('organizaciones')
-        .insert({ nombre, email_contacto: email, owner_id: OWNER_ID })
-        .select('id')
-        .single();
-      if (orgErr || !org) {
-        console.error('[registrar-demo] Error creando org:', orgErr);
-        return res.status(500).json({ ok: false, error: 'error_central' });
-      }
-      orgId = org.id;
-    }
-
-    await central
-      .from('empleados_organizacion')
-      .upsert({ org_id: orgId, email }, { onConflict: 'org_id,email', ignoreDuplicates: true });
-
-    const hoy = new Date().toISOString().slice(0, 10);
-    const vencimiento = new Date(Date.now() + DEMO_DIAS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const { error: subErr } = await central
-      .from('suscripciones_apps')
-      .insert({
-        org_id:            orgId,
-        app_id:            APP_ID_DOCENTE,
-        plan:              'profesional',
-        estado:            'demo',
-        fecha_inicio_demo: hoy,
-        limite_demo_dias:  DEMO_DIAS,
-        fecha_vencimiento: vencimiento,
-      });
-
-    if (subErr) {
-      console.error('[registrar-demo] Error suscripción:', subErr);
+    if (rpcErr) {
+      console.error('[registrar-demo] Error RPC:', rpcErr);
       return res.status(500).json({ ok: false, error: 'error_central' });
     }
 
+    if (rpcResult?.ya_existe) return res.json({ ok: true, ya_existe: true });
+
+    const orgId = rpcResult?.org_id;
+
     try {
-      await central.from('notificaciones_admin').insert({ org_id: orgId, tipo: 'nueva_org', app_id: APP_ID_DOCENTE });
       const fechaAlta = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
