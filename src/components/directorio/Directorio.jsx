@@ -6,31 +6,66 @@ import { Card, Btn, Fld, Sel, SecT, WA, Mail, Confirm } from '../ui';
 const COLORES = ["#2D6A4F","#1d4ed8","#7c3aed","#dc2626","#d97706","#0891b2","#be185d","#15803d"];
 
 function defaultTurno() {
-  return { secretaria:'', telefonoSecretaria:'', mailSecretaria:'', preceptor:'', telefonoPreceptor:'', mailPreceptor:'', eoe:[] };
+  return { secretaria:'', telefonoSecretaria:'', mailSecretaria:'', preceptores:[], eoe:[] };
+}
+
+function migrarTurno(turno) {
+  if (!turno) return turno;
+  // Retrocompatibilidad: si tiene preceptor como string, lo convierte a array
+  if (typeof turno.preceptor === 'string' && turno.preceptor) {
+    const { preceptor, telefonoPreceptor, mailPreceptor, ...resto } = turno;
+    return { ...resto, preceptores: [{ nombre: preceptor, telefono: telefonoPreceptor||'', mail: mailPreceptor||'' }] };
+  }
+  if (!turno.preceptores) return { ...turno, preceptores: [] };
+  return turno;
 }
 
 function SeccionTurnoForm({ label, icon, turno, onChange }) {
-  const set = (k, v) => onChange({ ...turno, [k]: v });
-  const setEoe = (i, k, v) => onChange({ ...turno, eoe: turno.eoe.map((m, mi) => mi === i ? { ...m, [k]: v } : m) });
-  const addEoe = () => onChange({ ...turno, eoe: [...(turno.eoe || []), { nombre:'', rol:'Orientadora', telefono:'', mail:'' }] });
-  const delEoe = i => onChange({ ...turno, eoe: turno.eoe.filter((_, mi) => mi !== i) });
+  const t = migrarTurno(turno);
+  const set = (k, v) => onChange({ ...t, [k]: v });
+  const setPre = (i, k, v) => onChange({ ...t, preceptores: t.preceptores.map((p, pi) => pi === i ? { ...p, [k]: v } : p) });
+  const addPre = () => onChange({ ...t, preceptores: [...(t.preceptores || []), { nombre:'', telefono:'', mail:'' }] });
+  const delPre = i => onChange({ ...t, preceptores: t.preceptores.filter((_, pi) => pi !== i) });
+  const setEoe = (i, k, v) => onChange({ ...t, eoe: t.eoe.map((m, mi) => mi === i ? { ...m, [k]: v } : m) });
+  const addEoe = () => onChange({ ...t, eoe: [...(t.eoe || []), { nombre:'', rol:'Orientadora', telefono:'', mail:'' }] });
+  const delEoe = i => onChange({ ...t, eoe: t.eoe.filter((_, mi) => mi !== i) });
   return (
     <div style={{ background:'#fff', border:`1.5px solid ${BD}`, borderRadius:12, padding:'12px 14px', marginBottom:14 }}>
       <div style={{ fontWeight:700, fontSize:13, color:TX, marginBottom:10 }}>{icon} {label}</div>
-      <Fld label="Secretaria/o" value={turno.secretaria||''} onChange={v=>set('secretaria',v)} placeholder="Apellido, Nombre" />
-      <Fld label="Teléfono secretaria/o" value={turno.telefonoSecretaria||''} onChange={v=>set('telefonoSecretaria',v)} placeholder="11-xxxx-xxxx" />
-      <Fld label="Mail secretaria/o" value={turno.mailSecretaria||''} onChange={v=>set('mailSecretaria',v)} placeholder="" />
-      <Fld label="Preceptor/a" value={turno.preceptor||''} onChange={v=>set('preceptor',v)} placeholder="Apellido, Nombre" />
-      <Fld label="Teléfono preceptor/a" value={turno.telefonoPreceptor||''} onChange={v=>set('telefonoPreceptor',v)} placeholder="11-xxxx-xxxx" />
-      <Fld label="Mail preceptor/a" value={turno.mailPreceptor||''} onChange={v=>set('mailPreceptor',v)} placeholder="" />
+      <Fld label="Secretaria/o" value={t.secretaria||''} onChange={v=>set('secretaria',v)} placeholder="Apellido, Nombre" />
+      <Fld label="Teléfono secretaria/o" value={t.telefonoSecretaria||''} onChange={v=>set('telefonoSecretaria',v)} placeholder="11-xxxx-xxxx" />
+      <Fld label="Mail secretaria/o" value={t.mailSecretaria||''} onChange={v=>set('mailSecretaria',v)} placeholder="" />
+
+      {/* Preceptores — array */}
+      <div style={{ marginTop:10, borderTop:`1px solid ${BD}`, paddingTop:10 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+          <div style={{ fontWeight:700, fontSize:12, color:GR }}>🗂 Preceptores</div>
+          <button onClick={addPre} style={{ background:G+'18', border:'none', borderRadius:8, padding:'3px 8px', fontSize:11, fontWeight:700, color:G, cursor:'pointer', fontFamily:'inherit' }}>+ Agregar</button>
+        </div>
+        {(t.preceptores||[]).length === 0
+          ? <div style={{ fontSize:12, color:GL, fontStyle:'italic' }}>Sin preceptores</div>
+          : (t.preceptores||[]).map((p, i) => (
+              <div key={i} style={{ borderTop:`1px solid ${BD}`, paddingTop:8, marginTop:8 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
+                  <div style={{ fontWeight:600, fontSize:12 }}>Preceptor/a {i+1}</div>
+                  <button onClick={()=>delPre(i)} style={{ background:'none', border:'none', cursor:'pointer', color:'#dc2626', fontSize:13, padding:0 }}>🗑</button>
+                </div>
+                <Fld label="Nombre" value={p.nombre} onChange={v=>setPre(i,'nombre',v)} placeholder="Apellido, Nombre" />
+                <Fld label="Teléfono" value={p.telefono||''} onChange={v=>setPre(i,'telefono',v)} placeholder="11-xxxx-xxxx" />
+                <Fld label="Mail" value={p.mail||''} onChange={v=>setPre(i,'mail',v)} />
+              </div>
+            ))}
+      </div>
+
+      {/* EOE */}
       <div style={{ marginTop:10, borderTop:`1px solid ${BD}`, paddingTop:10 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
           <div style={{ fontWeight:700, fontSize:12, color:GR }}>🔬 EOE</div>
           <button onClick={addEoe} style={{ background:G+'18', border:'none', borderRadius:8, padding:'3px 8px', fontSize:11, fontWeight:700, color:G, cursor:'pointer', fontFamily:'inherit' }}>+ Agregar</button>
         </div>
-        {(turno.eoe||[]).length === 0
+        {(t.eoe||[]).length === 0
           ? <div style={{ fontSize:12, color:GL, fontStyle:'italic' }}>Sin integrantes EOE</div>
-          : (turno.eoe||[]).map((m, i) => (
+          : (t.eoe||[]).map((m, i) => (
               <div key={i} style={{ borderTop:`1px solid ${BD}`, paddingTop:8, marginTop:8 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
                   <div style={{ fontWeight:600, fontSize:12 }}>Integrante {i+1}</div>
@@ -49,17 +84,18 @@ function SeccionTurnoForm({ label, icon, turno, onChange }) {
 
 function TurnoCard({ turno, label, icon, inline }) {
   if (!turno) return null;
-  const hasSec = turno.secretaria;
-  const hasPre = turno.preceptor;
-  const hasEoe = (turno.eoe||[]).length > 0;
+  const t = migrarTurno(turno);
+  const hasSec = t.secretaria;
+  const hasPre = (t.preceptores||[]).length > 0;
+  const hasEoe = (t.eoe||[]).length > 0;
   if (!hasSec && !hasPre && !hasEoe) {
     const empty = <div style={{ color:GL, fontSize:13, fontStyle:'italic' }}>Sin personal cargado para este turno</div>;
     return inline ? empty : <Card><SecT text={`${icon} ${label}`} />{empty}</Card>;
   }
   const items = [
-    hasSec && { titulo:'Secretaria/o', nombre:turno.secretaria, tel:turno.telefonoSecretaria, mail:turno.mailSecretaria },
-    hasPre && { titulo:'Preceptor/a',  nombre:turno.preceptor,  tel:turno.telefonoPreceptor,  mail:turno.mailPreceptor  },
-    ...(turno.eoe||[]).map(m => ({ titulo:`EOE — ${m.rol||'Integrante'}`, nombre:m.nombre, tel:m.telefono, mail:m.mail })),
+    hasSec && { titulo:'Secretaria/o', nombre:t.secretaria, tel:t.telefonoSecretaria, mail:t.mailSecretaria },
+    ...(t.preceptores||[]).map((p, i) => ({ titulo: (t.preceptores.length > 1 ? `Preceptor/a ${i+1}` : 'Preceptor/a'), nombre:p.nombre, tel:p.telefono, mail:p.mail })),
+    ...(t.eoe||[]).map(m => ({ titulo:`EOE — ${m.rol||'Integrante'}`, nombre:m.nombre, tel:m.telefono, mail:m.mail })),
   ].filter(Boolean);
   const content = items.map((it, i) => (
     <div key={i} style={{ padding:'10px 0', borderBottom:i<items.length-1?`1px solid ${BD}`:'none' }}>
@@ -208,8 +244,8 @@ function FichaEscuela({ escuela, alumnos, docentes, onEditar, onToggleActivo, on
       )}
 
       {/* Tabs turnos */}
-      {((escuela.turnoDia && (escuela.turnoDia.secretaria||escuela.turnoDia.preceptor||(escuela.turnoDia.eoe||[]).length>0)) ||
-        (escuela.turnoTarde && (escuela.turnoTarde.secretaria||escuela.turnoTarde.preceptor||(escuela.turnoTarde.eoe||[]).length>0))) && (
+      {((escuela.turnoDia && (escuela.turnoDia.secretaria||(escuela.turnoDia.preceptores||[]).length>0||escuela.turnoDia.preceptor||(escuela.turnoDia.eoe||[]).length>0)) ||
+        (escuela.turnoTarde && (escuela.turnoTarde.secretaria||(escuela.turnoTarde.preceptores||[]).length>0||escuela.turnoTarde.preceptor||(escuela.turnoTarde.eoe||[]).length>0))) && (
         <Card>
           <div style={{ display:'flex', gap:0, marginBottom:12, borderRadius:10, overflow:'hidden', border:`1.5px solid ${BD}` }}>
             {[['mañana','☀️ Mañana'],['tarde','🌙 Tarde']].map(([k,l])=>(
