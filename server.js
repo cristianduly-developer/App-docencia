@@ -750,8 +750,9 @@ TABLAS.forEach(tabla => {
       if (TABLAS_CACHE.includes(tabla)) {
         res.set('Cache-Control', 'private, max-age=120');
       }
+      if (!req.orgId) return res.status(403).json({ error: 'sin_org' });
       let query = getDb(req.orgId).from(tabla).select('*');
-      if (req.orgId) query = query.eq('org_id', req.orgId);
+      query = query.eq('org_id', req.orgId);
       // Excluir registros borrados — incluye null (registros sin el campo seteado)
       query = query.or('eliminado.eq.false,eliminado.is.null');
       // Filtros opcionales por query params
