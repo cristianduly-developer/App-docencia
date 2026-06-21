@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { G, GD } from '../../constants';
+import { DB } from '../../utils/db';
 
 export default function Bienvenida({ usuario, onComplete }) {
   const esDemo   = usuario?.acceso?.estado === 'demo';
@@ -12,9 +13,15 @@ export default function Bienvenida({ usuario, onComplete }) {
 
   const guardar = () => {
     if (!nombre.trim()) { setError("Ingresá tu nombre"); return; }
-    const perfil = { nombre: nombre.trim(), whatsapp: wapp.trim(), mail: mail.trim() };
+    const perfil = {
+      id:       usuario?.email || ("perfil_" + Date.now()),
+      nombre:   nombre.trim(),
+      whatsapp: wapp.trim(),
+      mail:     mail.trim(),
+    };
     localStorage.setItem("aye_perfil",          JSON.stringify(perfil));
     localStorage.setItem("aye_onboarding_done", "1");
+    DB.save("perfiles", perfil);
     onComplete(perfil);
   };
 

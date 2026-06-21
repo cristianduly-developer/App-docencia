@@ -775,7 +775,7 @@ app.post('/api/claude', requireAuth, async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 // Supabase DB endpoints — GET / POST / DELETE genéricos
 // ══════════════════════════════════════════════════════════════
-const TABLAS = ['escuelas','docentes','profesionales','alumnos','registros','avisos','documentos'];
+const TABLAS = ['escuelas','docentes','profesionales','alumnos','registros','avisos','documentos','perfiles'];
 
 TABLAS.forEach(tabla => {
 
