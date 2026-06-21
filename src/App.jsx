@@ -7,6 +7,7 @@ import { AppProvider, appState } from './context/AppContext';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 import { useData } from './hooks/useData';
 import { ToastContainer, OfflineBar, toast } from './components/ui/Toast';
+import Bienvenida from './components/auth/Bienvenida';
 
 // Críticos — carga inmediata
 import PantallaLogin   from './components/auth/PantallaLogin';
@@ -169,6 +170,21 @@ export default function App() {
   };
 
   if (!usuario) return <PantallaLogin onLogin={login} />;
+
+  const onboardingDone = !!localStorage.getItem("aye_onboarding_done");
+  if (!onboardingDone) return (
+    <Bienvenida
+      usuario={usuario}
+      onComplete={(perfil) => {
+        if (perfil.nombre) {
+          const u = { ...usuario, nombre: perfil.nombre };
+          setUsuario(u);
+          grabar("aye_sesion", u);
+          appState.nombreDocente = perfil.nombre;
+        }
+      }}
+    />
+  );
 
   if (sincronizando) return (
     <div style={{ maxWidth:480, margin:"0 auto", minHeight:"100vh", background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, fontFamily:"Georgia,serif" }}>
