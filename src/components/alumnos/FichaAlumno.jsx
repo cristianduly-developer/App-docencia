@@ -461,6 +461,167 @@ function TabDocumentos({ alumno, docentes, escuelas, registros, ec }) {
   );
 }
 
+// ── Tab Horarios ───────────────────────────────────────────────
+function generarBloques(esc) {
+  const entrada   = esc?.jornadaEntrada   || "08:00";
+  const durBloque = esc?.jornadaDurBloque || 50;
+  const durRecreo = esc?.jornadaDurRecreo ?? 10;
+  const nBloques  = esc?.jornadaBloques   || 4;
+  const [h, m] = entrada.split(":").map(Number);
+  let mins = h * 60 + m;
+  const fmt = t => `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;
+  const bloques = [];
+  for (let i = 0; i < nBloques; i++) {
+    bloques.push({ esRecreo: false, horaInicio: fmt(mins), horaFin: fmt(mins + durBloque), nBloque: i });
+    mins += durBloque;
+    if (durRecreo > 0 && i < nBloques - 1) {
+      bloques.push({ esRecreo: true, horaInicio: fmt(mins), horaFin: fmt(mins + durRecreo) });
+      mins += durRecreo;
+    }
+  }
+  return bloques;
+}
+
+function TabHorarios({ alumno, esc, ec, docentes, onSave }) {
+  const docsEsc = docentes.filter(d => d.escuelaId === alumno.escuelaId && !d.eliminado);
+  const plantilla = generarBloques(esc);
+  const tieneEstructura = esc?.jornadaEntrada || esc?.jornadaBloques;
+
+  // Estado: día seleccionado para editar
+  const [diaEdit, setDiaEdit] = useState(null);
+  // Para cada día, asignaciones: array paralelo a plantilla con { docenteId, aula }
+  const [editSlots, setEditSlots] = useState({});
+
+  // Inicializar editSlots desde horarios existentes al abrir un día
+  const abrirDia = (dia) => {
+    const slots = plantilla.map(b => {
+      if (b.esRecreo) return { esRecreo: true };
+      const existing = (alumno.horarios || []).find(h =>
+        h.dia === dia && h.horaInicio === b.horaInicio && !h.esRecreo
+      );
+      return { docenteId: existing?.docenteId || "", aula: existing?.aula || "" };
+    });
+    setEditSlots(prev => ({ ...prev, [dia]: slots }));
+    setDiaEdit(dia);
+  };
+
+  const setSlot = (idx, k, v) => setEditSlots(prev => ({
+    ...prev,
+    [diaEdit]: prev[diaEdit].map((s, i) => i === idx ? { ...s, [k]: v } : s)
+  }));
+
+  const guardarDia = () => {
+    // Quitar bloques existentes de ese día y reemplazar
+    const sinEseDia = (alumno.horarios || []).filter(h => h.dia !== diaEdit);
+    const nuevos = [...sinEseDia];
+    const slots = editSlots[diaEdit] || [];
+    plantilla.forEach((b, i) => {
+      if (b.esRecreo) {
+        nuevos.push({ id: uid(), dia: diaEdit, horaInicio: b.horaInicio, horaFin: b.horaFin, esRecreo: true, docenteId: "", aula: "" });
+      } else {
+        const s = slots[i] || {};
+        nuevos.push({ id: uid(), dia: diaEdit, horaInicio: b.horaInicio, horaFin: b.horaFin, esRecreo: false, docenteId: s.docenteId || "", aula: s.aula || "" });
+      }
+    });
+    onSave && onSave({ ...alumno, horarios: nuevos });
+    setDiaEdit(null);
+  };
+
+  const limpiarDia = (dia) => {
+    const nuevos = (alumno.horarios || []).filter(h => h.dia !== dia);
+    onSave && onSave({ ...alumno, horarios: nuevos });
+  };
+
+  const diasConHorario = new Set((alumno.horarios || []).filter(h => !h.esRecreo).map(h => h.dia));
+
+  // Vista de edición de un día
+  if (diaEdit !== null) {
+    const slots = editSlots[diaEdit] || [];
+    return (
+      <div>
+        <button onClick={() => setDiaEdit(null)} style={{ background:"none", border:"none", cursor:"pointer", color:ec, fontWeight:700, fontSize:14, padding:0, marginBottom:16, fontFamily:"inherit" }}>← Volver</button>
+        <div style={{ fontWeight:800, fontSize:15, marginBottom:12 }}>{DIAS_L[diaEdit]}</div>
+        {plantilla.map((b, i) => {
+          const s = slots[i] || {};
+          if (b.esRecreo) return (
+            <div key={i} style={{ background:"#f0fdf4", border:"1px solid #86efac", borderRadius:12, padding:"10px 14px", marginBottom:8, display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ background:"#dcfce7", borderRadius:8, padding:"6px 10px", textAlign:"center", minWidth:52 }}>
+                <div style={{ fontSize:12, fontWeight:800, color:G }}>{b.horaInicio}</div>
+                <div style={{ fontSize:10, color:GL }}>{b.horaFin}</div>
+              </div>
+              <div style={{ fontWeight:700, color:G, fontSize:14 }}>☕ Recreo</div>
+            </div>
+          );
+          return (
+            <div key={i} style={{ background:"#fff", border:`1.5px solid ${BD}`, borderRadius:12, padding:"12px 14px", marginBottom:8 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+                <div style={{ background:ec+"15", borderRadius:8, padding:"6px 10px", textAlign:"center", minWidth:52 }}>
+                  <div style={{ fontSize:12, fontWeight:800, color:ec }}>{b.horaInicio}</div>
+                  <div style={{ fontSize:10, color:GL }}>{b.horaFin}</div>
+                </div>
+                <div style={{ fontWeight:700, fontSize:13, color:TX }}>Bloque {b.nBloque + 1}</div>
+              </div>
+              <div style={{ marginBottom:8 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:GR, textTransform:"uppercase", marginBottom:4 }}>Docente</div>
+                <select value={s.docenteId||""} onChange={e=>setSlot(i,"docenteId",e.target.value)} style={{ width:"100%", border:`1.5px solid ${BD}`, borderRadius:10, padding:"9px 12px", fontSize:14, fontFamily:"inherit", background:"#fff", boxSizing:"border-box" }}>
+                  <option value="">Sin docente</option>
+                  {docsEsc.map(d=><option key={d.id} value={d.id}>{d.materia} — {d.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:GR, textTransform:"uppercase", marginBottom:4 }}>Aula / Espacio</div>
+                <input value={s.aula||""} onChange={e=>setSlot(i,"aula",e.target.value)} placeholder="Aula 3A..." style={{ width:"100%", border:`1.5px solid ${BD}`, borderRadius:10, padding:"9px 12px", fontSize:14, fontFamily:"inherit", boxSizing:"border-box" }} />
+              </div>
+            </div>
+          );
+        })}
+        <div style={{ display:"flex", gap:8, marginTop:4 }}>
+          <Btn full outline onClick={() => setDiaEdit(null)} color={GR}>Cancelar</Btn>
+          <Btn full color={ec} onClick={guardarDia}>Guardar {DIAS_L[diaEdit]}</Btn>
+        </div>
+      </div>
+    );
+  }
+
+  // Vista principal: lista de días
+  return (
+    <div>
+      {!tieneEstructura && (
+        <div style={{ background:"#fffbeb", border:"1.5px solid #fcd34d", borderRadius:12, padding:"12px 14px", marginBottom:14, fontSize:13, color:"#92400e" }}>
+          ⚠️ La escuela no tiene estructura de jornada configurada. Editá la escuela en el Directorio para definir los bloques y recreos.
+        </div>
+      )}
+      <div style={{ fontSize:13, color:GR, marginBottom:12 }}>Tocá un día para cargar o editar los docentes de cada bloque.</div>
+      {[1,2,3,4,5].map(dia => {
+        const tiene = diasConHorario.has(dia);
+        const bloquesDia = (alumno.horarios||[]).filter(h=>h.dia===dia&&!h.esRecreo);
+        return (
+          <div key={dia} style={{ background:"#fff", border:`1.5px solid ${tiene ? ec : BD}`, borderRadius:14, padding:"12px 14px", marginBottom:8, display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ flex:1 }}>
+              <div style={{ fontWeight:800, fontSize:14, color: tiene ? ec : TX }}>{DIAS_L[dia]}</div>
+              {tiene
+                ? <div style={{ fontSize:12, color:GR, marginTop:3 }}>
+                    {bloquesDia.filter(h=>h.docenteId).map(h=>{
+                      const d = docentes.find(x=>x.id===h.docenteId);
+                      return d ? `${h.horaInicio} ${d.materia}` : null;
+                    }).filter(Boolean).join(" · ")}
+                  </div>
+                : <div style={{ fontSize:12, color:GL, marginTop:3 }}>Sin horario cargado</div>
+              }
+            </div>
+            <div style={{ display:"flex", gap:6 }}>
+              <button onClick={() => abrirDia(dia)} style={{ background: ec+"15", border:"none", borderRadius:8, padding:"6px 12px", cursor:"pointer", color:ec, fontWeight:700, fontSize:12, fontFamily:"inherit" }}>
+                {tiene ? "Editar" : "Cargar"}
+              </button>
+              {tiene && <button onClick={() => limpiarDia(dia)} style={{ background:"#fef2f2", border:"none", borderRadius:8, padding:"6px 10px", cursor:"pointer", color:"#dc2626", fontWeight:700, fontSize:12, fontFamily:"inherit" }}>🗑</button>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── FichaAlumno principal ──────────────────────────────────────
 export default function FichaAlumno({ alumno, alumnos, docentes, pros, escuelas, registros, recs, onBack, onVerClase, onAddRec, onAddReg, onDelReg, onEditar, onToggleActivo, onDelete, onSave }) {
   const [tab, setTab] = useState("info");
@@ -685,104 +846,7 @@ export default function FichaAlumno({ alumno, alumnos, docentes, pros, escuelas,
       {tab === "actividades" && <TabActividades alumno={alumno} registros={registros} docentes={docentes} ec={ec} />}
 
       {/* ── TAB HORARIOS ── */}
-      {tab === "horarios" && <div>
-        {formH && (() => {
-          const docsEsc = docentes.filter(d => d.escuelaId === alumno.escuelaId && !d.eliminado);
-          const setFH = (k, v) => setFormH(p => ({ ...p, [k]: v }));
-          const esNuevo = formHIdx === null;
-          const toggleDia = d => {
-            if (!esNuevo) { setFH("dia", d); return; }
-            const dias = formH.dias || [];
-            setFH("dias", dias.includes(d) ? dias.filter(x => x !== d) : [...dias, d]);
-          };
-          const diaActivo = d => esNuevo ? (formH.dias || []).includes(d) : formH.dia === d;
-          return (
-            <div style={{ background: "#f8fafc", border: `2px solid ${ec}`, borderRadius: 16, padding: 16, marginBottom: 12 }}>
-              <div style={{ fontWeight: 800, fontSize: 15, color: TX, marginBottom: 12 }}>{esNuevo ? "Nuevo bloque" : "Editar bloque"}</div>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: GR, textTransform: "uppercase", marginBottom: 4 }}>{esNuevo ? "Días (podés elegir varios)" : "Día"}</div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {[1, 2, 3, 4, 5].map(d => (
-                    <button key={d} onClick={() => toggleDia(d)} style={{ padding: "7px 12px", borderRadius: 20, border: "2px solid", fontFamily: "inherit", fontWeight: 700, fontSize: 13, cursor: "pointer", borderColor: diaActivo(d) ? ec : BD, background: diaActivo(d) ? ec : "#fff", color: diaActivo(d) ? "#fff" : "#475569" }}>{DIAS_L[d].slice(0, 3)}</button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: GR, textTransform: "uppercase", marginBottom: 6 }}>Hora inicio</div>
-                  <input type="time" value={formH.horaInicio} onChange={e => setFH("horaInicio", e.target.value)} style={{ width: "100%", border: `1.5px solid ${BD}`, borderRadius: 10, padding: "9px 12px", fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: GR, textTransform: "uppercase", marginBottom: 6 }}>Hora fin</div>
-                  <input type="time" value={formH.horaFin} onChange={e => setFH("horaFin", e.target.value)} style={{ width: "100%", border: `1.5px solid ${BD}`, borderRadius: 10, padding: "9px 12px", fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" }} />
-                </div>
-              </div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "10px 12px", background: formH.esRecreo ? "#f0fdf4" : "#fff", borderRadius: 10, border: `1.5px solid ${formH.esRecreo ? G : BD}` }}>
-                  <input type="checkbox" checked={formH.esRecreo || false} onChange={e => { setFH("esRecreo", e.target.checked); if (e.target.checked) setFH("docenteId", ""); }} style={{ width: 18, height: 18, accentColor: G }} />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: formH.esRecreo ? G : TX }}>Es recreo / recreación</span>
-                </label>
-              </div>
-              {!formH.esRecreo && (
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: GR, textTransform: "uppercase", marginBottom: 6 }}>Docente</div>
-                  <select value={formH.docenteId || ""} onChange={e => setFH("docenteId", e.target.value)} style={{ width: "100%", border: `1.5px solid ${BD}`, borderRadius: 10, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", background: "#fff", boxSizing: "border-box" }}>
-                    <option value="">Sin docente asignado</option>
-                    {docsEsc.map(d => <option key={d.id} value={d.id}>{d.materia} — {d.nombre}</option>)}
-                  </select>
-                </div>
-              )}
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: GR, textTransform: "uppercase", marginBottom: 6 }}>Aula / Espacio</div>
-                <input value={formH.aula || ""} onChange={e => setFH("aula", e.target.value)} placeholder="Aula 3A, Laboratorio..." style={{ width: "100%", border: `1.5px solid ${BD}`, borderRadius: 10, padding: "9px 12px", fontSize: 14, fontFamily: "inherit", boxSizing: "border-box" }} />
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <Btn full outline onClick={() => { setFormH(null); setFormHIdx(null); }} color={GR}>Cancelar</Btn>
-                <Btn full color={ec} onClick={guardarBloque}>{esNuevo ? "Agregar bloque" : "Guardar cambios"}</Btn>
-              </div>
-            </div>
-          );
-        })()}
-
-        {!formH && (
-          <button onClick={() => { setFormH({ dias: [], horaInicio: "08:00", horaFin: "09:00", docenteId: "", aula: "", esRecreo: false }); setFormHIdx(null); }}
-            style={{ width: "100%", padding: 12, borderRadius: 14, border: `2px dashed ${ec}`, background: ec + "0a", color: ec, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit", marginBottom: 12 }}>
-            + Agregar bloque horario
-          </button>
-        )}
-
-        {[1, 2, 3, 4, 5].map(dia => {
-          const bloques = (alumno.horarios || []).map((h, i) => ({ ...h, _i: i })).filter(h => h.dia === dia).sort((a, b) => a.horaInicio > b.horaInicio ? 1 : -1);
-          if (bloques.length === 0) return null;
-          return (
-            <div key={dia} style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: ec, textTransform: "uppercase", letterSpacing: .5, marginBottom: 6, paddingLeft: 4 }}>{DIAS_L[dia]}</div>
-              {bloques.map(h => {
-                const doc = h.docenteId ? docentes.find(d => d.id === h.docenteId) : null;
-                return (
-                  <div key={h._i} style={{ background: "#fff", border: `1.5px solid ${BD}`, borderRadius: 14, padding: "12px 14px", marginBottom: 6, display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ background: h.esRecreo ? "#f0fdf4" : ec + "15", borderRadius: 10, padding: "8px 10px", textAlign: "center", flexShrink: 0, minWidth: 52 }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: h.esRecreo ? G : ec, lineHeight: 1 }}>{h.horaInicio}</div>
-                      <div style={{ fontSize: 10, color: GL, marginTop: 2 }}>{h.horaFin}</div>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {h.esRecreo
-                        ? <div style={{ fontWeight: 700, fontSize: 14, color: G }}>☕ Recreo</div>
-                        : <><div style={{ fontWeight: 800, fontSize: 14, color: TX }}>{doc?.materia || "Sin materia"}</div><div style={{ fontSize: 12, color: GR, marginTop: 2 }}>{doc?.nombre || "Sin docente"}{h.aula ? ` · ${h.aula}` : ""}</div></>}
-                    </div>
-                    {!formH && (
-                      <div style={{ display: "flex", gap: 4 }}>
-                        <button onClick={() => { setFormH({ ...h }); setFormHIdx(h._i); }} style={{ background: ec + "15", border: "none", borderRadius: 8, padding: "5px 10px", cursor: "pointer", color: ec, fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>Editar</button>
-                        <button onClick={() => { const nuevos = (alumno.horarios || []).filter((_, i) => i !== h._i); onSave && onSave({ ...alumno, horarios: nuevos }); }} style={{ background: "#fef2f2", border: "none", borderRadius: 8, padding: "5px 10px", cursor: "pointer", color: "#dc2626", fontWeight: 700, fontSize: 12, fontFamily: "inherit" }}>🗑</button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>}
+      {tab === "horarios" && <TabHorarios alumno={alumno} esc={esc} ec={ec} docentes={docentes} onSave={onSave} />}
     </div>
   );
 }

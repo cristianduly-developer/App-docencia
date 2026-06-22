@@ -335,6 +335,58 @@ function FormEscuela({ inicial, escuelas, onSave, onCancel }) {
       <Fld label="Dirección" value={form.direccion||""} onChange={v=>set("direccion",v)} placeholder="Calle, número..." />
       <Fld label="Teléfono institucional" value={form.telefono||""} onChange={v=>set("telefono",v)} placeholder="011-xxxx-xxxx" />
 
+      {/* Estructura de jornada */}
+      <div style={{ background:"#fff", border:`1.5px solid ${BD}`, borderRadius:12, padding:"12px 14px", marginBottom:14 }}>
+        <div style={{ fontWeight:700, fontSize:13, color:TX, marginBottom:10 }}>🕐 Estructura de jornada</div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:GR, textTransform:"uppercase", marginBottom:6 }}>Hora de entrada</div>
+            <input type="time" value={form.jornadaEntrada||"08:00"} onChange={e=>set("jornadaEntrada",e.target.value)} style={{ width:"100%", border:`1.5px solid ${BD}`, borderRadius:10, padding:"9px 12px", fontSize:14, fontFamily:"inherit", boxSizing:"border-box" }} />
+          </div>
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:GR, textTransform:"uppercase", marginBottom:6 }}>Cant. bloques</div>
+            <select value={form.jornadaBloques||4} onChange={e=>set("jornadaBloques",Number(e.target.value))} style={{ width:"100%", border:`1.5px solid ${BD}`, borderRadius:10, padding:"10px 12px", fontSize:14, fontFamily:"inherit", background:"#fff", boxSizing:"border-box" }}>
+              {[2,3,4,5,6,7,8].map(n=><option key={n} value={n}>{n} bloques</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:GR, textTransform:"uppercase", marginBottom:6 }}>Duración bloque (min)</div>
+            <select value={form.jornadaDurBloque||50} onChange={e=>set("jornadaDurBloque",Number(e.target.value))} style={{ width:"100%", border:`1.5px solid ${BD}`, borderRadius:10, padding:"10px 12px", fontSize:14, fontFamily:"inherit", background:"#fff", boxSizing:"border-box" }}>
+              {[30,35,40,45,50,55,60,80,90].map(n=><option key={n} value={n}>{n} min</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:GR, textTransform:"uppercase", marginBottom:6 }}>Duración recreo (min)</div>
+            <select value={form.jornadaDurRecreo||10} onChange={e=>set("jornadaDurRecreo",Number(e.target.value))} style={{ width:"100%", border:`1.5px solid ${BD}`, borderRadius:10, padding:"10px 12px", fontSize:14, fontFamily:"inherit", background:"#fff", boxSizing:"border-box" }}>
+              {[0,5,10,15,20,25,30].map(n=><option key={n} value={n}>{n === 0 ? "Sin recreo" : `${n} min`}</option>)}
+            </select>
+          </div>
+        </div>
+        {/* Preview de la jornada */}
+        {(() => {
+          const entrada = form.jornadaEntrada || "08:00";
+          const durBloque = form.jornadaDurBloque || 50;
+          const durRecreo = form.jornadaDurRecreo ?? 10;
+          const bloques = form.jornadaBloques || 4;
+          const [h, m] = entrada.split(":").map(Number);
+          let mins = h * 60 + m;
+          const fmt = t => `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;
+          const items = [];
+          for (let i = 0; i < bloques; i++) {
+            items.push(`${fmt(mins)}–${fmt(mins+durBloque)} · Bloque ${i+1}`);
+            mins += durBloque;
+            if (durRecreo > 0 && i < bloques - 1) { items.push(`${fmt(mins)}–${fmt(mins+durRecreo)} · Recreo`); mins += durRecreo; }
+          }
+          return (
+            <div style={{ background:"#f8fafc", borderRadius:8, padding:"8px 10px" }}>
+              <div style={{ fontSize:11, fontWeight:700, color:GR, marginBottom:6, textTransform:"uppercase" }}>Vista previa</div>
+              {items.map((it,i) => <div key={i} style={{ fontSize:12, color: it.includes("Recreo") ? G : TX, fontWeight: it.includes("Recreo") ? 600 : 400, marginBottom:2 }}>{it.includes("Recreo") ? "☕ " : "📚 "}{it}</div>)}
+              <div style={{ fontSize:11, color:GL, marginTop:4 }}>Salida: {fmt(mins)}</div>
+            </div>
+          );
+        })()}
+      </div>
+
       {/* Equipo directivo */}
       <div style={{ background:"#fff",border:`1.5px solid ${BD}`,borderRadius:12,padding:"12px 14px",marginBottom:14 }}>
         <div style={{ fontWeight:700,fontSize:13,color:TX,marginBottom:10 }}>👤 Director/a</div>
