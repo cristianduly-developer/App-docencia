@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { G, GD } from '../../constants';
-import { DB } from '../../utils/db';
 
 export default function Bienvenida({ usuario, onComplete }) {
   const esDemo   = usuario?.acceso?.estado === 'demo';
@@ -21,7 +20,6 @@ export default function Bienvenida({ usuario, onComplete }) {
     };
     localStorage.setItem("aye_perfil",          JSON.stringify(perfil));
     localStorage.setItem("aye_onboarding_done", "1");
-    DB.save("perfiles", perfil);
     onComplete(perfil);
   };
 
