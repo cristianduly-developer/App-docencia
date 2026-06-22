@@ -171,7 +171,7 @@ export default function App() {
 
   if (!usuario) return <PantallaLogin onLogin={login} />;
 
-  const onboardingDone = !!localStorage.getItem("aye_onboarding_done");
+  const onboardingDone = !!localStorage.getItem("aye_onboarding_done") || !!usuario?.nombre;
   if (!onboardingDone) return (
     <Bienvenida
       usuario={usuario}
