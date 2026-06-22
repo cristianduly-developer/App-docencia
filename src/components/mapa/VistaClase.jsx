@@ -58,18 +58,26 @@ function fraccionHTML(frac, color) {
 }
 
 function parsearActividad(texto, color) {
-  // Si no tiene marcadores estructurados, render simple
-  const tieneEjercicios = /^EJERCICIO\s+\d+:/im.test(texto);
-  if (!tieneEjercicios) return renderSimpleActividad(texto, color);
+  const tieneEjercicios = /EJERCICIO\s+\d+:/i.test(texto);
+  // Detectar marcadores aunque vengan con espacios, guiones o markdown bold
+  const textoLimpio = texto.replace(/\*\*/g, '').replace(/^[-–•]\s*/gm, '');
+  const tieneMarcadores = /(TABLA|CONCEPTO|PASOS|COMPLETAR|PREGUNTA|VF|UNIR|VISUAL)\s*:/i.test(textoLimpio);
+  if (!tieneEjercicios && !tieneMarcadores) return renderSimpleActividad(texto, color);
+  if (!tieneEjercicios && tieneMarcadores) {
+    return parsearActividad(`EJERCICIO 1: 📝 Actividad\n${textoLimpio}`, color);
+  }
 
   const bloques = texto.split(/(?=^EJERCICIO\s+\d+:)/im).filter(b => b.trim());
   const coloresSec = [color, "#1D4ED8", "#B45309", "#6D28D9", "#0F766E"];
 
   return bloques.map((bloque, idx) => {
-    const lineas = bloque.trim().split("\n").map(l => l.trim()).filter(Boolean);
+    const lineas = bloque.trim().split("\n").map(l => l.trim().replace(/\*\*/g, '').replace(/^[-–•]\s*/, '')).filter(Boolean);
     const colorSec = coloresSec[idx % coloresSec.length];
     const headerMatch = lineas[0].match(/^EJERCICIO\s+\d+:\s*(.*)/i);
-    const titulo = headerMatch ? headerMatch[1] : lineas[0];
+    const EMOJIS_EJ = ['🔢', '✏️', '🧩', '💡', '⭐', '🎯'];
+    const tituloRaw = headerMatch ? headerMatch[1] : lineas[0];
+    const tieneEmoji = /\p{Emoji}/u.test(tituloRaw.charAt(0));
+    const titulo = tieneEmoji ? tituloRaw : `${EMOJIS_EJ[idx % EMOJIS_EJ.length]} ${tituloRaw}`;
 
     let contenido = "";
     let i = 1;
@@ -252,9 +260,9 @@ Antes de escribir, analizá:
 3. ¿Qué aportan las terapias? (fonoaudiología → apoyos en lenguaje escrito/oral; psicomotricidad → actividades con motor fino; psicología → regulación emocional)
 4. ¿Cuántos ejercicios puede resolver en una clase sin saturarse?
 
-Con eso en mente, escribí la adaptación usando los elementos que MEJOR sirvan a este alumno/a específico:
+Con eso en mente, escribí la adaptación. IMPORTANTE: usá EXACTAMENTE este formato, respetando cada etiqueta en mayúscula al inicio de la línea:
 
-EJERCICIO 1: [emoji] [título en lenguaje simple]
+EJERCICIO 1: 🔢 [título corto en lenguaje simple]
 CONCEPTO: [idea clave en una oración, hablándole de vos]
 VISUAL: [solo si hay fracciones — escribí la fracción, ej: 1/4]
 PASOS:
@@ -268,12 +276,15 @@ PREGUNTA: [pregunta abierta con espacio de respuesta]
 VF: [afirmación — marca V o F]
 UNIR: [término 1, término 2, término 3, definición 1, definición 2, definición 3]
 
-Reglas:
-- Incluí solo los ejercicios que la tarea original tiene — no agregues más
-- Verificá que los números sean matemáticamente correctos
-- En TABLA: celdas separadas por |, poné ? en las que completa el alumno
+EJERCICIO 2: ✏️ [título corto]
+[continuar con los marcadores que correspondan]
+
+Reglas OBLIGATORIAS — si no las seguís, la app no puede mostrar el resultado:
+- Cada ejercicio DEBE empezar con "EJERCICIO N: emoji título" en su propia línea
+- Usá solo los marcadores de arriba (CONCEPTO, PASOS, TABLA, COMPLETAR, PREGUNTA, VF, UNIR)
+- En TABLA: primera fila son los encabezados, luego una fila por dato, celdas separadas por |, poné ? donde el alumno completa
 - En UNIR: primero todos los ítems izquierda, luego todos los de derecha, separados por coma
-- Lenguaje simple, directo, sin tecnicismos, sin asteriscos ni #` });
+- Sin asteriscos, sin #, sin guiones antes de los marcadores, sin texto libre fuera de los bloques` });
 
       const res = await fetch("/api/claude", {
         method: "POST", headers: authHeaders(),
@@ -401,7 +412,10 @@ Reglas:
     <Card sx={{ border: `2px solid ${ec}`, marginBottom: 8 }}>
       <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4 }}>Adaptación lista</div>
       <div style={{ fontSize: 12, color: GR, marginBottom: 12 }}>{alumno.nombre}{curso ? ` · ${curso}` : ""} · {materia}</div>
-      <div style={{ background: "#f8fafc", borderRadius: 10, padding: "14px 16px", fontSize: 13, color: TX, lineHeight: 1.8, marginBottom: 16, border: "1px solid #e2e8f0", whiteSpace: "pre-wrap", maxHeight: 320, overflowY: "auto" }}>{resultado}</div>
+      <div
+        style={{ background: "#f8fafc", borderRadius: 10, padding: "14px 16px", marginBottom: 16, border: "1px solid #e2e8f0", maxHeight: 480, overflowY: "auto" }}
+        dangerouslySetInnerHTML={{ __html: parsearActividad(resultado, ec) }}
+      />
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <button onClick={exportarPDF} style={{ width: "100%", padding: 13, borderRadius: 12, border: "none", background: ec, color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
           📄 Exportar PDF
