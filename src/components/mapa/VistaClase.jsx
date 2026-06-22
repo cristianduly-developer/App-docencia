@@ -42,19 +42,64 @@ function NotaRapida({ ec, ctx, alumnoId, onSave, onCancel }) {
 }
 
 // ── Helpers para el PDF visual ────────────────────────────────────
-function fraccionHTML(frac, color) {
-  const m = frac.match(/(\d+)\/(\d+)/);
-  if (!m) return "";
-  const num = parseInt(m[1]), den = parseInt(m[2]);
-  if (den < 2 || den > 16 || num < 1) return "";
+
+function visualFraccionBarras(num, den, color) {
   const partes = Array.from({ length: den }, (_, i) =>
-    `<div style="flex:1;min-width:16px;max-width:48px;height:32px;border:2px solid ${i < num ? color : "#cbd5e0"};border-radius:5px;background:${i < num ? color : "#f8fafc"}"></div>`
+    `<div style="flex:1;min-width:16px;max-width:48px;height:36px;border:2px solid ${i < num ? color : "#cbd5e0"};border-radius:5px;background:${i < num ? color : "#f8fafc"}"></div>`
   ).join("");
-  return `<div style="display:flex;align-items:center;gap:14px;background:#f8fafc;border-radius:10px;padding:12px 16px;margin-bottom:14px;flex-wrap:wrap">
-    <div style="font-size:18px;font-weight:800;color:${color}">${frac}</div>
-    <div style="display:flex;gap:4px">${partes}</div>
-    <div style="font-size:13px;color:#475569">${num} parte${num > 1 ? "s" : ""} de ${den}</div>
-  </div>`;
+  return `<div style="display:flex;gap:4px;margin-bottom:6px">${partes}</div>`;
+}
+
+function visualFraccionCirculo(num, den, color) {
+  const r = 40, cx = 44, cy = 44;
+  let paths = '';
+  for (let i = 0; i < den; i++) {
+    const a1 = (i / den) * 2 * Math.PI - Math.PI / 2;
+    const a2 = ((i + 1) / den) * 2 * Math.PI - Math.PI / 2;
+    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+    const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+    const large = den === 1 ? 1 : 0;
+    const fill = i < num ? color : '#e2e8f0';
+    paths += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z" fill="${fill}" stroke="white" stroke-width="2"/>`;
+  }
+  return `<svg width="88" height="88" viewBox="0 0 88 88">${paths}</svg>`;
+}
+
+function visualJarra(num, den, color) {
+  const pct = Math.round((num / den) * 100);
+  const fillH = Math.round((num / den) * 60);
+  return `<svg width="60" height="90" viewBox="0 0 60 90">
+    <rect x="10" y="10" width="40" height="70" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/>
+    <rect x="10" y="${10 + (60 - fillH)}" width="40" height="${fillH}" rx="4" fill="${color}" opacity="0.8"/>
+    <rect x="10" y="10" width="40" height="70" rx="6" fill="none" stroke="#64748b" stroke-width="2"/>
+    <text x="30" y="95" text-anchor="middle" font-size="11" fill="#475569" font-weight="bold">${pct}%</text>
+  </svg>`;
+}
+
+function fraccionHTML(texto, color) {
+  const tipo = texto.toLowerCase();
+  const esPizza = /pizza|torta|circulo|círculo|pastel/.test(tipo);
+  const esJarra = /jarra|vaso|botella|litro|líquido|liquido|recipiente/.test(tipo);
+
+  // Buscar todas las fracciones en el texto
+  const fracs = [...texto.matchAll(/(\d+)\/(\d+)/g)];
+  if (!fracs.length) return "";
+
+  const items = fracs.map(m => {
+    const num = parseInt(m[1]), den = parseInt(m[2]);
+    if (den < 2 || den > 16 || num < 1 || num > den) return "";
+    let visual = '';
+    if (esPizza) visual = visualFraccionCirculo(num, den, color);
+    else if (esJarra) visual = visualJarra(num, den, color);
+    else visual = visualFraccionBarras(num, den, color);
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      ${visual}
+      <div style="font-size:16px;font-weight:800;color:${color}">${m[0]}</div>
+      <div style="font-size:11px;color:#64748b">${num} de ${den}</div>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  return `<div style="background:#f8fafc;border-radius:10px;padding:14px 16px;margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">${items}</div>`;
 }
 
 function parsearActividad(texto, color) {
