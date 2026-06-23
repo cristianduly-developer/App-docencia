@@ -32,7 +32,18 @@ function BotonVoz({ onTranscripcion, color }) {
       }
     };
     r.onerror = (e) => {
-      if (e.error !== "no-speech") setError("Error al grabar. Verificá los permisos del micrófono.");
+      grabandoRef.current = false;
+      setGrabando(false);
+      const msgs = {
+        "not-allowed":        "❌ Permiso de micrófono denegado. Habilitalo en la configuración del navegador.",
+        "network":            "❌ Error de red. La grabación de voz requiere conexión a internet.",
+        "service-not-allowed":"❌ Tu navegador no permite grabación de voz. Probá con Chrome en Android.",
+        "audio-capture":      "❌ No se detectó micrófono en el dispositivo.",
+        "aborted":            "",
+        "no-speech":          "",
+      };
+      const msg = msgs[e.error];
+      if (msg !== "") setError(msg || `❌ Error al grabar (${e.error}). Verificá los permisos del micrófono.`);
     };
     return r;
   };
