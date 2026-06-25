@@ -83,7 +83,7 @@ app.use(cors({
   }
 }));
 
-app.use(express.json({ limit: '512kb' }));
+app.use(express.json({ limit: '5mb' }));
 app.use(require('express').static(require('path').join(__dirname, 'dist')));
 
 // Cliente global con service key — para operaciones admin y fallback
@@ -631,24 +631,66 @@ app.post('/api/registrar-demo', async (req, res) => {
 
     try {
       const fechaAlta = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
-        body: JSON.stringify({
-          from: 'onboarding@resend.dev',
-          to: 'cristianduly@gmail.com',
-          subject: `🆕 Nueva cuenta demo — ${payload.name ?? email}`,
-          html: `<h2>🆕 Nueva cuenta demo en App Docentes</h2>
-            <table style="border-collapse:collapse;font-family:sans-serif;">
-              <tr><td style="padding:8px;font-weight:bold;">Nombre</td><td style="padding:8px;">${payload.name ?? '—'}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">Email</td><td style="padding:8px;">${email}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">App</td><td style="padding:8px;">Docentes</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">Plan</td><td style="padding:8px;">Profesional (demo)</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">Días de prueba</td><td style="padding:8px;">${DEMO_DIAS} días</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">Fecha de alta</td><td style="padding:8px;">${fechaAlta}</td></tr>
-            </table>`,
+      const mailFrom = process.env.MAIL_FROM || 'onboarding@resend.dev';
+      const appUrl = 'https://aye-app-one.vercel.app';
+
+      const bienvenidaHtml = `
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+          <div style="background:#7c3aed;padding:32px 24px;text-align:center;">
+            <div style="font-size:40px;">📚</div>
+            <h1 style="color:white;margin:8px 0 4px;font-size:22px;">App Docentes</h1>
+            <p style="color:rgba(255,255,255,.85);margin:0;font-size:14px;">Soluciones MDP</p>
+          </div>
+          <div style="padding:32px 24px;">
+            <h2 style="margin:0 0 8px;font-size:20px;color:#111827;">¡Hola, ${nombre}!</h2>
+            <p style="color:#374151;margin:0 0 24px;font-size:15px;line-height:1.6;">
+              Tu prueba gratuita de <strong>${DEMO_DIAS} días</strong> ya está activa. Podés empezar a generar tus informes ahora mismo.
+            </p>
+            <div style="background:#f9fafb;border-radius:10px;padding:20px;margin-bottom:24px;">
+              <p style="margin:0 0 12px;font-weight:700;color:#111827;font-size:13px;text-transform:uppercase;letter-spacing:.5px;">¿Qué podés hacer?</p>
+              <p style="margin:0 0 8px;color:#374151;font-size:14px;">✅ Redactar informes psicopedagógicos con IA</p>
+              <p style="margin:0 0 8px;color:#374151;font-size:14px;">✅ Gestionar alumnos y hacer seguimiento</p>
+              <p style="margin:0 0 0;color:#374151;font-size:14px;">✅ Armar horarios y organizar tu agenda</p>
+            </div>
+            <div style="text-align:center;">
+              <a href="${appUrl}" style="display:inline-block;background:#7c3aed;color:white;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">Abrir App Docentes →</a>
+            </div>
+          </div>
+          <div style="border-top:1px solid #f1f5f9;padding:20px 24px;text-align:center;">
+            <p style="margin:0;color:#9ca3af;font-size:12px;">Soluciones MDP · Si tenés dudas respondé este mail</p>
+          </div>
+        </div>`;
+
+      await Promise.all([
+        fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
+          body: JSON.stringify({
+            from: mailFrom,
+            to: email,
+            subject: `¡Bienvenido/a a App Docentes! Tu prueba de ${DEMO_DIAS} días está activa`,
+            html: bienvenidaHtml,
+          }),
         }),
-      });
+        fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
+          body: JSON.stringify({
+            from: mailFrom,
+            to: 'cristianduly@gmail.com',
+            subject: `🆕 Nueva cuenta demo — ${payload.name ?? email}`,
+            html: `<h2>🆕 Nueva cuenta demo en App Docentes</h2>
+              <table style="border-collapse:collapse;font-family:sans-serif;">
+                <tr><td style="padding:8px;font-weight:bold;">Nombre</td><td style="padding:8px;">${payload.name ?? '—'}</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;">Email</td><td style="padding:8px;">${email}</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;">App</td><td style="padding:8px;">Docentes</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;">Plan</td><td style="padding:8px;">Profesional (demo)</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;">Días de prueba</td><td style="padding:8px;">${DEMO_DIAS} días</td></tr>
+                <tr><td style="padding:8px;font-weight:bold;">Fecha de alta</td><td style="padding:8px;">${fechaAlta}</td></tr>
+              </table>`,
+          }),
+        }),
+      ]);
     } catch (mailErr) {
       console.error('[registrar-demo] Error Resend:', mailErr?.message || mailErr);
     }
@@ -698,10 +740,12 @@ app.post('/api/claude', requireAuth, async (req, res) => {
   if (!Array.isArray(msgs) || msgs.length === 0 || msgs.length > 10)
     return res.status(400).json({ error: 'Formato de mensaje inválido.' });
   for (const m of msgs) {
-    if (!m || typeof m.content !== 'string' || m.content.length > 8000)
-      return res.status(400).json({ error: 'Mensaje demasiado largo o inválido.' });
-    if (!['user','assistant'].includes(m.role))
+    if (!m || !['user','assistant'].includes(m.role))
       return res.status(400).json({ error: 'Rol de mensaje inválido.' });
+    if (typeof m.content === 'string' && m.content.length > 8000)
+      return res.status(400).json({ error: 'Mensaje demasiado largo.' });
+    if (!Array.isArray(m.content) && typeof m.content !== 'string')
+      return res.status(400).json({ error: 'Formato de mensaje inválido.' });
   }
 
   try {
