@@ -90,6 +90,18 @@ export default function App() {
     return () => window.removeEventListener('aye:sesion-expirada', handler);
   }, []);
 
+  // Ping de presencia cada 5 minutos para mantener ultimo_acceso actualizado en el SaaS
+  useEffect(() => {
+    if (!usuario) return;
+    const ping = () => {
+      const token = getSessionToken();
+      if (!token) return;
+      fetch('/api/presencia', { headers: { 'x-session-token': token } }).catch(() => {});
+    };
+    const t = setInterval(ping, 5 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [usuario]);
+
   // Auto-logout por inactividad 30 min
   useEffect(() => {
     if (!usuario) return;

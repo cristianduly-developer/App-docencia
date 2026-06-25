@@ -552,6 +552,18 @@ app.post('/api/verify-token', async (req, res) => {
 
       orgId = acceso.ret_org_id || acceso.org_id || null;
 
+      // Ping de presencia al central (fire and forget)
+      if (orgId) {
+        const central = centralAdmin();
+        if (central) {
+          central.from('suscripciones_apps')
+            .update({ ultimo_acceso: new Date().toISOString() })
+            .eq('app_id', APP_ID_DOCENTE)
+            .eq('org_id', orgId)
+            .then(() => {});
+        }
+      }
+
       // Guard crítico: si no hay org_id la docente vería datos de todos — bloqueamos
       if (!orgId) {
         console.warn(`[verify-token] Sin org_id para ${email} — acceso bloqueado`);
@@ -930,6 +942,22 @@ app.post('/api/seed', (req, res, next) => {
 // ══════════════════════════════════════════════════════════════
 // Health check
 // ══════════════════════════════════════════════════════════════
+// Ping de presencia — actualiza ultimo_acceso en el SaaS central
+app.get('/api/presencia', requireAuth, async (req, res) => {
+  const { orgId } = req;
+  if (orgId) {
+    const central = centralAdmin();
+    if (central) {
+      central.from('suscripciones_apps')
+        .update({ ultimo_acceso: new Date().toISOString() })
+        .eq('app_id', APP_ID_DOCENTE)
+        .eq('org_id', orgId)
+        .then(() => {});
+    }
+  }
+  res.json({ ok: true });
+});
+
 app.get('/api/health', requireAuth, async (req, res) => {
   const { error } = await supabase.from('escuelas').select('count').limit(1);
   res.json({ status: 'ok', supabase: error ? 'error' : 'conectado', timestamp: new Date().toISOString() });
