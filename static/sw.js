@@ -4,7 +4,13 @@
 const CACHE_NAME = 'aye-v__BUILD__';
 
 self.addEventListener('install', event => {
-  self.skipWaiting();
+  // No llamamos skipWaiting() — esperamos que el usuario apruebe la actualización
+});
+
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', event => {

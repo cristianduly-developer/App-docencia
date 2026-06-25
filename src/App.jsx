@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ui/ErrorBoundary';
 import { useData } from './hooks/useData';
 import { ToastContainer, OfflineBar, toast } from './components/ui/Toast';
 import Bienvenida from './components/auth/Bienvenida';
+import { useAppUpdate } from './hooks/useAppUpdate';
 
 // Críticos — carga inmediata
 import PantallaLogin   from './components/auth/PantallaLogin';
@@ -122,6 +123,8 @@ export default function App() {
     marcarAusenteTotal, rehabilitarAlumno, cargarHistorialAlumno,
   } = useData(usuario);
 
+  const { hayActualizacion, applyUpdate } = useAppUpdate();
+
   // Precargar chunks lazy 3s después del login — navegación instantánea
   useEffect(() => {
     if (!usuario) return;
@@ -228,6 +231,19 @@ export default function App() {
       <OfflineBar />
       <ToastContainer />
       <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: FO, fontFamily: "'Georgia',serif", display: "flex", flexDirection: "column" }}>
+
+        {/* Banner actualización disponible */}
+        {hayActualizacion && (
+          <div style={{ background: "#1e40af", color: "#fff", padding: "10px 16px", fontSize: 13, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            <span>✨ Hay una nueva versión disponible</span>
+            <button
+              onClick={applyUpdate}
+              style={{ background: "#fff", color: "#1e40af", border: "none", borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+            >
+              Actualizar
+            </button>
+          </div>
+        )}
 
         {/* Banner sincronizando */}
         {sincronizando && (
