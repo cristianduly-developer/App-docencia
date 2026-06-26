@@ -552,15 +552,25 @@ app.post('/api/verify-token', async (req, res) => {
 
       orgId = acceso.ret_org_id || acceso.org_id || null;
 
-      // Ping de presencia al central (fire and forget)
+      // Actualizar ultimo_acceso e incrementar cant_sesiones en login real
       if (orgId) {
         const central = centralAdmin();
         if (central) {
           central.from('suscripciones_apps')
-            .update({ ultimo_acceso: new Date().toISOString() })
+            .select('cant_sesiones')
             .eq('app_id', APP_ID_DOCENTE)
             .eq('org_id', orgId)
-            .then(() => {});
+            .maybeSingle()
+            .then(({ data }) => {
+              central.from('suscripciones_apps')
+                .update({
+                  ultimo_acceso: new Date().toISOString(),
+                  cant_sesiones: (data?.cant_sesiones ?? 0) + 1,
+                })
+                .eq('app_id', APP_ID_DOCENTE)
+                .eq('org_id', orgId)
+                .then(() => {});
+            });
         }
       }
 
