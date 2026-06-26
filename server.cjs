@@ -651,10 +651,20 @@ app.post('/api/registrar-demo', async (req, res) => {
 
     const orgId = rpcResult?.org_id;
 
+    const central2 = centralAdmin();
+    if (central2) {
+      central2.from('notificaciones_admin').insert({
+        tipo: 'nueva_org',
+        mensaje: `Nueva cuenta demo en App Docentes — ${nombre} (${email})`,
+        org_id: orgId,
+        app_id: APP_ID_DOCENTE,
+      }).then(() => {});
+    }
+
     try {
       const fechaAlta = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
       const mailFrom = process.env.MAIL_FROM || 'onboarding@resend.dev';
-      const appUrl = 'https://aye-app-one.vercel.app';
+      const appUrl = 'https://docentes.solucionesmdp.com.ar';
 
       const bienvenidaHtml = `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
@@ -679,7 +689,7 @@ app.post('/api/registrar-demo', async (req, res) => {
             </div>
           </div>
           <div style="border-top:1px solid #f1f5f9;padding:20px 24px;text-align:center;">
-            <p style="margin:0;color:#9ca3af;font-size:12px;">Soluciones MDP · Si tenés dudas respondé este mail</p>
+            <p style="margin:0;color:#9ca3af;font-size:12px;">Soluciones MDP · <a href="https://wa.me/5492235767784" style="color:#9ca3af;">Escribinos por WhatsApp</a></p>
           </div>
         </div>`;
 
