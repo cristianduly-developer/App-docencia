@@ -305,6 +305,9 @@ export default function App() {
                   })}
                 </div>
               </div>
+              <button onClick={() => { setMenuUsuario(false); window.location.href = "https://docentes.solucionesmdp.com.ar/ayuda"; }} style={{ width: "100%", padding: "12px 16px", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "inherit", color: TX, fontWeight: 700, fontSize: 13, textAlign: "left", borderBottom: "1px solid #f1f5f9" }}>
+                <span>📖</span> Ayuda
+              </button>
               <button onClick={() => { setMenuUsuario(false); logout(); }} style={{ width: "100%", padding: "12px 16px", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "inherit", color: "#dc2626", fontWeight: 700, fontSize: 13, textAlign: "left" }}>
                 <span>🚪</span> Cerrar sesión
               </button>

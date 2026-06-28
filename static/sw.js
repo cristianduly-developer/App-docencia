@@ -24,8 +24,9 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Las llamadas a la API siempre van a la red
+  // Las llamadas a la API y la página de ayuda siempre van a la red
   if (event.request.url.includes('/api/')) return;
+  if (new URL(event.request.url).pathname.startsWith('/ayuda')) return;
 
   // Los assets de Vite (con hash en el nombre) se pueden cachear
   const url = new URL(event.request.url);

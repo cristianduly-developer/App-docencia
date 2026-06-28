@@ -687,6 +687,9 @@ app.post('/api/registrar-demo', async (req, res) => {
             <div style="text-align:center;">
               <a href="${appUrl}" style="display:inline-block;background:#7c3aed;color:white;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;">Abrir App Docentes →</a>
             </div>
+            <div style="text-align:center;margin-top:12px;">
+              <a href="${appUrl}/ayuda" style="display:inline-block;background:#f3f4f6;color:#374151;padding:10px 24px;border-radius:10px;font-weight:600;font-size:13px;text-decoration:none;">📖 ¿No sabés por dónde empezar? Ver guía de ayuda</a>
+            </div>
           </div>
           <div style="border-top:1px solid #f1f5f9;padding:20px 24px;text-align:center;">
             <p style="margin:0;color:#9ca3af;font-size:12px;">Soluciones MDP · <a href="https://wa.me/5492235767784" style="color:#9ca3af;">Escribinos por WhatsApp</a></p>

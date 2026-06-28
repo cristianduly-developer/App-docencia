@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Centro de Ayuda — App Docentes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--g:#2D6A4F;--gd:#1a3a2a;--fo:#f1f5f9;--bd:#e2e8f0;--tx:#1a202c;--gr:#64748b;--gl:#94a3b8}
+body{font-family:'DM Sans',sans-serif;background:var(--fo);color:var(--tx);font-size:15px;line-height:1.6}
+a{color:var(--g);text-decoration:none}
+a:hover{text-decoration:underline}
+
+.header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--bd);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.header-left{display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;background:var(--g);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;font-weight:800}
+.header h1{font-size:16px;font-weight:700;color:var(--tx)}
+.badge{background:#f0fdf4;color:var(--g);border:1px solid #bbf7d0;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700}
+.btn-app{background:var(--g);color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block}
+.btn-app:hover{background:var(--gd);text-decoration:none;color:#fff}
+
+.hero{background:linear-gradient(135deg,var(--g),var(--gd));color:#fff;padding:40px 24px;text-align:center}
+.hero h2{font-family:'Playfair Display',serif;font-size:28px;margin-bottom:8px}
+.hero p{font-size:15px;opacity:.88;max-width:480px;margin:0 auto}
+
+.layout{display:grid;grid-template-columns:220px 1fr;max-width:960px;margin:0 auto}
+@media(max-width:700px){.layout{grid-template-columns:1fr}.sidebar{display:none}.mobile-pills{display:flex}}
+
+.sidebar{padding:24px 16px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto}
+.sidebar h3{font-size:11px;font-weight:700;color:var(--gr);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;padding:0 8px}
+.sidebar a{display:block;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:500;color:var(--tx);margin-bottom:2px;transition:background .15s}
+.sidebar a:hover,.sidebar a.active{background:#f0fdf4;color:var(--g);text-decoration:none;font-weight:700}
+
+.mobile-pills{display:none;position:sticky;top:57px;z-index:90;overflow-x:auto;padding:10px 16px;gap:8px;background:#fff;border-bottom:1px solid var(--bd)}
+.mobile-pills a{white-space:nowrap;background:#f1f5f9;color:var(--tx);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;flex-shrink:0}
+.mobile-pills a:hover{background:#f0fdf4;color:var(--g);text-decoration:none}
+
+.content{padding:32px 24px;min-width:0}
+.section{margin-bottom:48px;scroll-margin-top:72px}
+.section h2{font-family:'Playfair Display',serif;font-size:22px;color:var(--tx);margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--bd)}
+.section h3{font-size:16px;font-weight:700;color:var(--tx);margin:24px 0 8px}
+.section p,.section li{color:var(--gr);margin-bottom:8px}
+.section ul{padding-left:20px}
+
+.card{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.card h4{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:6px}
+
+.steps{list-style:none;padding:0}
+.steps li{display:flex;gap:14px;margin-bottom:16px;align-items:flex-start}
+.step-num{width:28px;height:28px;min-width:28px;background:var(--g);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;margin-top:1px}
+.step-body strong{display:block;font-size:14px;font-weight:700;color:var(--tx);margin-bottom:2px}
+.step-body span{font-size:13px;color:var(--gr)}
+
+.tip,.warn,.success,.info{border-radius:10px;padding:14px 16px;margin:16px 0;font-size:13px;line-height:1.6}
+.tip{background:#eff6ff;border-left:3px solid #3b82f6;color:#1e40af}
+.warn{background:#fffbeb;border-left:3px solid #f59e0b;color:#92400e}
+.success{background:#f0fdf4;border-left:3px solid #22c55e;color:#166534}
+.info{background:#faf5ff;border-left:3px solid #a855f7;color:#6b21a8}
+
+table{width:100%;border-collapse:collapse;font-size:13px;margin:16px 0}
+th{background:var(--fo);padding:10px 12px;text-align:left;font-weight:700;color:var(--tx);border-bottom:2px solid var(--bd)}
+td{padding:10px 12px;border-bottom:1px solid var(--bd);color:var(--gr)}
+tr:last-child td{border-bottom:none}
+.check{color:#22c55e;font-weight:700;text-align:center}
+.cross{color:#94a3b8;text-align:center}
+.plan-col{text-align:center}
+.plan-name{font-weight:800;color:var(--g)}
+
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.pill{background:#f0fdf4;color:var(--g);border:1px solid #bbf7d0;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600}
+.pill.gray{background:var(--fo);color:var(--tx);border-color:var(--bd)}
+
+details{border:1px solid var(--bd);border-radius:12px;margin-bottom:10px;overflow:hidden}
+summary{padding:14px 18px;font-weight:700;font-size:14px;cursor:pointer;color:var(--tx);background:#fff;list-style:none;display:flex;justify-content:space-between;align-items:center}
+summary::after{content:"▼";font-size:11px;color:var(--gr);transition:transform .2s}
+details[open] summary::after{transform:rotate(180deg)}
+details[open] summary{background:#f8fafc}
+.faq-body{padding:14px 18px 18px;font-size:14px;color:var(--gr);background:#fff;line-height:1.7}
+
+footer{background:#fff;border-top:1px solid var(--bd);padding:32px 24px;text-align:center;font-size:13px;color:var(--gr)}
+footer a{color:var(--g)}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="logo">📚</div>
+    <h1>App Docentes</h1>
+    <span class="badge">Centro de ayuda</span>
+  </div>
+  <a href="https://docentes.solucionesmdp.com.ar" class="btn-app">Abrir app →</a>
+</header>
+
+<div class="hero">
+  <h2>¿Cómo podemos ayudarte?</h2>
+  <p>Todo lo que necesitás saber para organizar tu trabajo docente. Sin complicaciones.</p>
+</div>
+
+<div class="mobile-pills">
+  <a href="#inicio">🏠 Inicio</a>
+  <a href="#alumnos">👤 Alumnos</a>
+  <a href="#mapa">🗺 Mapa</a>
+  <a href="#horarios">🕐 Horarios</a>
+  <a href="#registros">✏️ Registros</a>
+  <a href="#avisos">🔔 Avisos</a>
+  <a href="#directorio">🏫 Directorio</a>
+  <a href="#reportes">📊 Reportes</a>
+  <a href="#copiloto">🤖 Co-Piloto</a>
+  <a href="#planes">⭐ Planes</a>
+  <a href="#faq">❓ FAQ</a>
+  <a href="#contacto">📞 Contacto</a>
+</div>
+
+<div class="layout">
+
+<nav class="sidebar">
+  <h3>Secciones</h3>
+  <a href="#inicio">🏠 Inicio / Dashboard</a>
+  <a href="#alumnos">👤 Alumnos</a>
+  <a href="#mapa">🗺 Mapa del día</a>
+  <a href="#horarios">🕐 Horarios</a>
+  <a href="#registros">✏️ Registros de clase</a>
+  <a href="#avisos">🔔 Avisos</a>
+  <a href="#directorio">🏫 Directorio escolar</a>
+  <a href="#reportes">📊 Reportes</a>
+  <a href="#copiloto">🤖 Co-Piloto IA</a>
+  <a href="#planes">⭐ Planes</a>
+  <a href="#faq">❓ Preguntas frecuentes</a>
+  <a href="#contacto">📞 Contacto</a>
+</nav>
+
+<main class="content">
+
+<section class="section" id="inicio">
+  <h2>🏠 Inicio / Dashboard</h2>
+  <p>Al entrar a la app lo primero que ves es el <strong>dashboard del día</strong>: tus alumnos de hoy, registros recientes y accesos rápidos a todo lo que usás.</p>
+  <div class="card">
+    <h4>¿Qué encontrás en el dashboard?</h4>
+    <ul>
+      <li>Mapa del día con las clases de la jornada actual</li>
+      <li>Acceso rápido a tus alumnos y escuelas</li>
+      <li>Últimos registros cargados</li>
+      <li>Avisos y recordatorios pendientes</li>
+    </ul>
+  </div>
+  <div class="tip">💡 En la esquina superior derecha está tu avatar. Desde ahí podés cambiar el color de la app, ver tu plan, contactar soporte o cerrar sesión.</div>
+</section>
+
+<section class="section" id="alumnos">
+  <h2>👤 Alumnos</h2>
+  <p>El módulo de alumnos es el corazón de la app. Aquí cargás cada estudiante y hacés el seguimiento a lo largo del tiempo.</p>
+
+  <h3>Agregar un alumno</h3>
+  <ul class="steps">
+    <li><div class="step-num">1</div><div class="step-body"><strong>Ir a "Alumnos"</strong><span>Desde la barra inferior, tocás el ícono de persona.</span></div></li>
+    <li><div class="step-num">2</div><div class="step-body"><strong>Tocar el botón "+"</strong><span>Aparece el botón verde abajo a la derecha.</span></div></li>
+    <li><div class="step-num">3</div><div class="step-body"><strong>Completar el formulario</strong><span>Nombre, apellido, escuela, nivel, año/sección y datos del adulto responsable.</span></div></li>
+    <li><div class="step-num">4</div><div class="step-body"><strong>Guardar</strong><span>Los datos se sincronizan automáticamente en la nube.</span></div></li>
+  </ul>
+
+  <h3>Ficha del alumno</h3>
+  <p>Al tocar un alumno abrís su ficha completa con varias pestañas:</p>
+  <div class="pills">
+    <span class="pill">📋 Datos generales</span>
+    <span class="pill">🕐 Horarios</span>
+    <span class="pill">✏️ Registros</span>
+    <span class="pill">📄 Documentos</span>
+  </div>
+
+  <h3>Archivar y rehabilitar alumnos</h3>
+  <p>Podés archivar alumnos que ya no estén activos sin borrarlos. Su historial se conserva íntegro y podés rehabilitarlos en cualquier momento.</p>
+  <div class="tip">💡 Archivando un alumno lo sacás de la vista diaria sin perder ningún dato.</div>
+</section>
+
+<section class="section" id="mapa">
+  <h2>🗺 Mapa del día</h2>
+  <p>El <strong>Mapa del día</strong> muestra todos los alumnos y clases programadas para hoy, en orden cronológico por horario.</p>
+  <div class="card">
+    <h4>¿Para qué sirve?</h4>
+    <ul>
+      <li>Ver de un vistazo todas las clases del día</li>
+      <li>Registrar la clase con un toque o por voz</li>
+      <li>Marcar ausencias rápidamente</li>
+      <li>Ver el resumen nocturno de lo que hiciste</li>
+    </ul>
+  </div>
+
+  <h3>Registrar una clase desde el mapa</h3>
+  <ul class="steps">
+    <li><div class="step-num">1</div><div class="step-body"><strong>Tocar el alumno en el mapa</strong><span>Abre la pantalla de registro de clase.</span></div></li>
+    <li><div class="step-num">2</div><div class="step-body"><strong>Escribir o dictar por voz</strong><span>Tocás el ícono de micrófono para dictar. El texto se transcribe automáticamente.</span></div></li>
+    <li><div class="step-num">3</div><div class="step-body"><strong>Guardar</strong><span>El registro queda asociado al alumno, la fecha y el bloque horario.</span></div></li>
+  </ul>
+
+  <div class="info">🎙 <strong>Registros por voz</strong>: usamos reconocimiento de voz del navegador. Funciona mejor con Chrome en Android. Si aparece un error, verificá que el micrófono esté habilitado en la configuración del navegador.</div>
+  <div class="tip">💡 El <strong>Mapa del finde</strong> funciona igual pero para sábados y domingos, ideal si tenés clases de apoyo los fines de semana.</div>
+</section>
+
+<section class="section" id="horarios">
+  <h2>🕐 Horarios y jornada escolar</h2>
+  <p>Configurar la jornada de cada escuela una sola vez hace que los horarios de todos sus alumnos se generen automáticamente.</p>
+
+  <h3>Configurar la jornada de una escuela</h3>
+  <ul class="steps">
+    <li><div class="step-num">1</div><div class="step-body"><strong>Ir al Directorio</strong><span>Menú inferior → ícono de libro/escuela.</span></div></li>
+    <li><div class="step-num">2</div><div class="step-body"><strong>Abrir la escuela y tocar "Editar"</strong><span>Botón de lápiz o los tres puntos.</span></div></li>
+    <li><div class="step-num">3</div><div class="step-body"><strong>Completar "Estructura de jornada"</strong><span>Hora de entrada, cantidad de bloques, duración de cada bloque y duración del recreo.</span></div></li>
+    <li><div class="step-num">4</div><div class="step-body"><strong>Guardar</strong><span>A partir de ahora, los horarios de todos los alumnos de esa escuela se generan solos.</span></div></li>
+  </ul>
+
+  <div class="card">
+    <h4>Ejemplo: Primaria 8:00 · 4 bloques · 50 min · Recreo 10 min</h4>
+    <div class="pills" style="margin-top:10px">
+      <span class="pill">08:00–08:50 Bloque 1</span>
+      <span class="pill gray">08:50–09:00 Recreo</span>
+      <span class="pill">09:00–09:50 Bloque 2</span>
+      <span class="pill gray">09:50–10:00 Recreo</span>
+      <span class="pill">10:00–10:50 Bloque 3</span>
+      <span class="pill gray">10:50–11:00 Recreo</span>
+      <span class="pill">11:00–11:50 Bloque 4</span>
+    </div>
+  </div>
+  <div class="tip">💡 Primaria y secundaria pueden tener recreos de distinta duración. Configurá cada escuela por separado con sus propios tiempos.</div>
+  <div class="warn">⚠️ Si la escuela no tiene jornada configurada, podés igual cargar los bloques de forma manual desde la ficha del alumno.</div>
+</section>
+
+<section class="section" id="registros">
+  <h2>✏️ Registros de clase</h2>
+  <p>Los registros guardan el historial de cada clase: qué trabajaste, cómo estuvo el alumno, observaciones importantes.</p>
+  <div class="card">
+    <h4>Desde dónde podés registrar</h4>
+    <ul>
+      <li><strong>Mapa del día</strong>: tocás el alumno y registrás directamente</li>
+      <li><strong>Ficha del alumno</strong>: pestaña "Registros" — ves el historial completo y podés agregar nuevos</li>
+    </ul>
+  </div>
+  <h3>Tipos de registro</h3>
+  <div class="pills">
+    <span class="pill">📝 Texto libre</span>
+    <span class="pill">🎙 Dictado por voz</span>
+    <span class="pill">❌ Ausencia</span>
+    <span class="pill">⚠️ Ausente total</span>
+  </div>
+  <div class="success">✅ Los registros se guardan con fecha y hora automáticamente. Podés editarlos o borrarlos después si cometiste un error.</div>
+</section>
+
+<section class="section" id="avisos">
+  <h2>🔔 Avisos</h2>
+  <p>Los avisos son recordatorios y notas importantes que querés tener a mano en la app.</p>
+  <div class="card">
+    <h4>Usos frecuentes</h4>
+    <ul>
+      <li>Recordar una reunión de padres o de EOE</li>
+      <li>Anotar algo importante sobre un alumno para el día siguiente</li>
+      <li>Dejar un mensaje o tarea pendiente</li>
+    </ul>
+  </div>
+  <div class="tip">💡 Los avisos no se borran automáticamente — tenés que marcarlos como resueltos o eliminarlos cuando ya no los necesités.</div>
+</section>
+
+<section class="section" id="directorio">
+  <h2>🏫 Directorio escolar</h2>
+  <p>El directorio concentra toda la información de las escuelas donde trabajás: autoridades, preceptores, EOE, turnos y estructura de jornada.</p>
+
+  <h3>¿Qué podés cargar de cada escuela?</h3>
+  <table>
+    <tr><th>Campo</th><th>Descripción</th></tr>
+    <tr><td>Nombre y nivel</td><td>Primaria, secundaria, especial, etc.</td></tr>
+    <tr><td>Director/a</td><td>Nombre, teléfono y mail</td></tr>
+    <tr><td>Secretaría</td><td>Nombre, teléfono y mail</td></tr>
+    <tr><td>EOE</td><td>Orientadores con nombre, rol y días de presencia</td></tr>
+    <tr><td>Turnos</td><td>Mañana, tarde, noche — cada uno con sus preceptores</td></tr>
+    <tr><td>Preceptores</td><td>Múltiples por turno, con teléfono y mail</td></tr>
+    <tr><td>Jornada</td><td>Estructura de bloques para generar horarios automáticos</td></tr>
+  </table>
+  <div class="tip">💡 Podés agregar <strong>múltiples preceptores por turno</strong>. Si hay distintas personas en mañana y tarde, se cargan por separado con sus datos de contacto.</div>
+</section>
+
+<section class="section" id="reportes">
+  <h2>📊 Reportes</h2>
+  <p>Los reportes te permiten revisar el seguimiento de cada alumno y exportar información en PDF para compartir.</p>
+  <div class="card">
+    <h4>¿Qué podés generar?</h4>
+    <ul>
+      <li>Historial completo de registros por alumno y período</li>
+      <li>Resumen de asistencias y ausencias</li>
+      <li>Informe exportable en PDF (plan Profesional y Premium)</li>
+    </ul>
+  </div>
+  <div class="info">📄 Los PDFs se pueden compartir por WhatsApp o mail directamente desde el celular usando el botón de compartir del sistema.</div>
+</section>
+
+<section class="section" id="copiloto">
+  <h2>🤖 Co-Piloto pedagógico</h2>
+  <p>El Co-Piloto es un asistente de inteligencia artificial diseñado para ayudarte con tu trabajo docente día a día.</p>
+  <div class="card">
+    <h4>¿Para qué sirve?</h4>
+    <ul>
+      <li>Redactar informes psicopedagógicos y observaciones</li>
+      <li>Sugerir estrategias pedagógicas para un alumno específico</li>
+      <li>Ayudarte a formular observaciones en lenguaje profesional</li>
+      <li>Responder preguntas sobre normativa o práctica docente</li>
+    </ul>
+  </div>
+  <div class="warn">⚠️ El Co-Piloto tiene un límite de consultas diarias por cuenta para mantener la calidad del servicio. Si lo alcanzás, podés volver a usarlo al día siguiente.</div>
+  <div class="tip">💡 Cuanto más contexto le das (escuela, nivel, nombre del alumno, situación puntual), mejor y más útil es la respuesta que obtenés.</div>
+</section>
+
+<section class="section" id="planes">
+  <h2>⭐ Planes</h2>
+  <p>La app tiene tres planes. Todos los usuarios nuevos comienzan con <strong>28 días de prueba gratuita</strong> con acceso completo al plan Profesional. Sin tarjeta de crédito.</p>
+
+  <table>
+    <tr>
+      <th>Función</th>
+      <th class="plan-col"><span class="plan-name">Básico</span></th>
+      <th class="plan-col"><span class="plan-name">Profesional</span></th>
+      <th class="plan-col"><span class="plan-name">Premium</span></th>
+    </tr>
+    <tr><td>Límite de alumnos</td><td class="plan-col">15</td><td class="plan-col">25</td><td class="plan-col">Ilimitados</td></tr>
+    <tr><td>Mapa del día</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+    <tr><td>Registros de clase</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+    <tr><td>Directorio escolar</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+    <tr><td>Avisos</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+    <tr><td>Registros por voz</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+    <tr><td>Co-Piloto IA</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+    <tr><td>Reportes PDF</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+    <tr><td>Horarios automáticos</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+    <tr><td>Prioridad en soporte</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td></tr>
+  </table>
+
+  <div class="success">🎁 El período de prueba de <strong>28 días</strong> te da acceso completo al plan Profesional sin ingresar tarjeta. Al vencer, contactanos por WhatsApp para activar el plan que mejor se adapte a vos.</div>
+</section>
+
+<section class="section" id="faq">
+  <h2>❓ Preguntas frecuentes</h2>
+
+  <details>
+    <summary>¿La app funciona sin internet?</summary>
+    <div class="faq-body">La app necesita conexión para sincronizar datos. Sin internet podés ver la información que ya cargaste (queda en caché en tu dispositivo), pero no podés guardar registros nuevos hasta que vuelva la conexión. Cuando estás sin conexión, aparece una barra amarilla arriba de la pantalla.</div>
+  </details>
+
+  <details>
+    <summary>¿Cómo instalo la app en el celular?</summary>
+    <div class="faq-body">En Chrome (Android): al entrar al sitio aparece un cartel abajo para "Instalar app". En Safari (iPhone): tocás el botón de compartir → "Agregar a inicio". No necesitás descargar nada de ninguna tienda — se instala directo desde el navegador.</div>
+  </details>
+
+  <details>
+    <summary>¿Mis datos están seguros?</summary>
+    <div class="faq-body">Sí. Tus datos se guardan en la nube con encriptación y solo vos podés verlos — cada cuenta está completamente aislada. Usamos Supabase (infraestructura AWS) y Google Login para la autenticación, que son estándares de la industria.</div>
+  </details>
+
+  <details>
+    <summary>¿Puedo usar la app en la computadora?</summary>
+    <div class="faq-body">Sí, la app funciona perfectamente en cualquier navegador de escritorio desde el mismo link. Está optimizada para celular pero no tiene restricciones para usarla en desktop.</div>
+  </details>
+
+  <details>
+    <summary>¿Qué pasa cuando vence el demo?</summary>
+    <div class="faq-body">Al vencer los 28 días, la app te avisa y no podés ingresar hasta activar un plan. Tus datos NO se borran — todo queda guardado y podés continuar usando la app normalmente una vez que activás. Contactanos por WhatsApp para activar tu cuenta.</div>
+  </details>
+
+  <details>
+    <summary>¿Puedo cargar más de una escuela?</summary>
+    <div class="faq-body">Sí, podés cargar todas las escuelas donde trabajás sin límite. Cada una puede tener su propia estructura de jornada, preceptores y autoridades.</div>
+  </details>
+
+  <details>
+    <summary>¿El registro por voz funciona en iPhone?</summary>
+    <div class="faq-body">El reconocimiento de voz funciona en Chrome (Android) y en Safari (iPhone con iOS 14.5 o superior). Si aparece un error de micrófono, verificá que el navegador tenga permiso para usarlo en la configuración del celular.</div>
+  </details>
+
+  <details>
+    <summary>¿Cómo cambio el color de la app?</summary>
+    <div class="faq-body">Tocá tu avatar (esquina superior derecha) → aparece una fila de círculos de colores → elegís el que más te guste. El cambio se aplica de inmediato a toda la app.</div>
+  </details>
+
+  <details>
+    <summary>¿Hay que pagar para seguir usando la app?</summary>
+    <div class="faq-body">El demo de 28 días es gratuito sin tarjeta. Para continuar después necesitás activar un plan. Los precios son accesibles y se coordinan directamente con nosotros por WhatsApp — sin suscripciones automáticas ni cobros sorpresa.</div>
+  </details>
+
+  <details>
+    <summary>¿Puedo eliminar un alumno si me equivoqué?</summary>
+    <div class="faq-body">Podés archivar alumnos (los ocultás de la vista activa pero conservás todo el historial) o eliminarlos definitivamente desde la ficha del alumno. La eliminación definitiva no se puede deshacer.</div>
+  </details>
+
+  <details>
+    <summary>¿Se actualiza la app automáticamente?</summary>
+    <div class="faq-body">Cuando hay una nueva versión disponible, la app te avisa con un banner azul en la parte superior. Vos decidís cuándo actualizar tocando el botón "Actualizar". No se actualiza sola sin avisarte.</div>
+  </details>
+</section>
+
+<section class="section" id="contacto">
+  <h2>📞 Contacto y soporte</h2>
+  <div class="card">
+    <h4>Escribinos por WhatsApp</h4>
+    <p>La forma más rápida de ayudarte. Respondemos en horario comercial.</p>
+    <a href="https://wa.me/5492235767784" style="display:inline-block;margin-top:10px;background:#25d366;color:#fff;border-radius:10px;padding:10px 20px;font-weight:700;font-size:14px;text-decoration:none">💬 Abrir WhatsApp</a>
+  </div>
+  <div class="card">
+    <h4>Por mail</h4>
+    <p><a href="mailto:info@solucionesmdp.com.ar">info@solucionesmdp.com.ar</a></p>
+  </div>
+  <div class="card">
+    <h4>Sitio web</h4>
+    <p><a href="https://solucionesmdp.com.ar" target="_blank">solucionesmdp.com.ar</a></p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>
+  <p>App Docentes · <a href="https://solucionesmdp.com.ar">Soluciones MDP</a> · <a href="https://wa.me/5492235767784">WhatsApp</a></p>
+  <p style="margin-top:6px;font-size:11px;color:#94a3b8">¿Encontraste algo incorrecto en esta guía? Avisanos por WhatsApp.</p>
+</footer>
+
+<script>
+const links = document.querySelectorAll('.sidebar a');
+const sections = document.querySelectorAll('.section');
+function updateActive() {
+  let current = '';
+  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 100) current = s.id; });
+  links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + current));
+}
+window.addEventListener('scroll', updateActive, { passive: true });
+updateActive();
+</script>
+</body>
+</html>
