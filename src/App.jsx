@@ -452,7 +452,7 @@ export default function App() {
                 <div style={{ fontWeight: 800, fontSize: 18 }}>⭐ Mi Plan</div>
               </div>
               <div style={{ padding: "16px" }}>
-                <MiPlan alumnos={alumnos} />
+                <MiPlan alumnos={alumnos} usuario={usuario} onActualizarUsuario={(u) => { setUsuario(u); grabar("aye_sesion", u); }} />
               </div>
             </div>
           )}

@@ -45,13 +45,13 @@ export default function PantallaLogin({ onLogin }) {
               return;
             }
             if (data.code === 'demo_vencido') {
-              setDatosSin({ email: data.email, nombre: data.nombre });
+              setDatosSin({ email: data.email, nombre: data.nombre, orgId: data.orgId });
               setPantalla('demo_vencido');
               setCargando(false);
               return;
             }
             if (data.code === 'impago' || data.code === 'suspendido') {
-              setDatosSin({ email: data.email, nombre: data.nombre, estado: data.code });
+              setDatosSin({ email: data.email, nombre: data.nombre, estado: data.code, orgId: data.orgId });
               setPantalla('suspendido');
               setCargando(false);
               return;
@@ -148,12 +148,12 @@ export default function PantallaLogin({ onLogin }) {
   }
 
   if (pantalla === 'demo_vencido') {
-    return <PantallaDemoVencido email={datosSin?.email} color={colorActivo}
+    return <PantallaDemoVencido email={datosSin?.email} orgId={datosSin?.orgId} color={colorActivo}
       onVolver={() => { setPantalla('login'); window._gsiIniciado = false; }} />;
   }
 
   if (pantalla === 'suspendido') {
-    return <PantallaSuspendida email={datosSin?.email} estado={datosSin?.estado} color={colorActivo}
+    return <PantallaSuspendida email={datosSin?.email} orgId={datosSin?.orgId} estado={datosSin?.estado} color={colorActivo}
       onVolver={() => { setPantalla('login'); window._gsiIniciado = false; }} />;
   }
 
@@ -327,68 +327,152 @@ function PantallaRegistro({ email, nombre, credential, color, onRegistrado, onVo
   );
 }
 
-// ── Pantalla: Demo vencido ─────────────────────────────────────
-function PantallaDemoVencido({ email, color, onVolver }) {
-  const waMsg = encodeURIComponent(`Hola! Se me venció la prueba de la App Docente. Mi email: ${email}`);
+// ── Selector de plan + pago MP ─────────────────────────────────
+const PLANES_DOCENTES = [
+  { id:'basico',      label:'Básico',      precio:'$25.000', alumnos:'15 alumnos',   ia:false,  color:'#6b7280' },
+  { id:'profesional', label:'Profesional', precio:'$35.000', alumnos:'25 alumnos',   ia:true,   color:'#4f46e5' },
+  { id:'premium',     label:'Premium',     precio:'$50.000', alumnos:'Ilimitados',   ia:true,   color:'#d97706' },
+];
+
+function SelectorPlanesMP({ orgId, email, titulo, subtitulo, emoji, color, onVolver }) {
+  const [planSel,   setPlanSel]   = useState('profesional');
+  const [cargando,  setCargando]  = useState(false);
+  const [error,     setError]     = useState('');
+  const waMsg = encodeURIComponent(`Hola! Necesito ayuda con mi suscripción a la App Docente. Mi email: ${email}`);
+
+  async function suscribirse() {
+    if (!orgId) {
+      setError('No pudimos identificar tu cuenta. Contactá al soporte por WhatsApp.');
+      return;
+    }
+    setCargando(true);
+    setError('');
+    try {
+      const res = await fetch('/api/mp-pago-publico', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org_id: orgId, plan: planSel }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.init_point) {
+        setError(data.error || 'Error al iniciar el pago. Intentá de nuevo.');
+        setCargando(false);
+        return;
+      }
+      window.location.href = data.init_point;
+    } catch {
+      setError('Error de conexión. Intentá de nuevo.');
+      setCargando(false);
+    }
+  }
+
   return (
-    <div style={{ maxWidth:420, margin:'0 auto', minHeight:'100vh', background:'#fff',
-      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-      fontFamily:"'Georgia',serif", padding:'40px 28px', textAlign:'center' }}>
-      <div style={{ fontSize:56, marginBottom:20 }}>⏳</div>
-      <div style={{ fontSize:22, fontWeight:800, color:TX, marginBottom:12 }}>
-        Tu prueba gratuita venció
+    <div style={{ maxWidth:420, margin:'0 auto', minHeight:'100vh', background:'#f8fafc',
+      display:'flex', flexDirection:'column', fontFamily:"'Georgia',serif" }}>
+      <div style={{ background:`linear-gradient(135deg,${color},${color}cc)`, padding:'32px 24px 24px', textAlign:'center' }}>
+        <div style={{ fontSize:44, marginBottom:8 }}>{emoji}</div>
+        <div style={{ fontSize:20, fontWeight:800, color:'#fff', marginBottom:4 }}>{titulo}</div>
+        <div style={{ fontSize:13, color:'rgba(255,255,255,.85)', lineHeight:1.5 }}>{subtitulo}</div>
       </div>
-      <div style={{ fontSize:14, color:GR, maxWidth:280, lineHeight:1.6, marginBottom:32 }}>
-        Gracias por probar la App Docente. Activá un plan para seguir gestionando tus alumnos e informes.
+
+      <div style={{ padding:'20px 20px 0', flex:1 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:'#374151', marginBottom:12, textTransform:'uppercase', letterSpacing:.5 }}>
+          Elegí tu plan
+        </div>
+
+        {PLANES_DOCENTES.map(p => (
+          <div key={p.id} onClick={() => setPlanSel(p.id)}
+            style={{ background:'#fff', border:`2px solid ${planSel===p.id ? p.color : '#e2e8f0'}`,
+              borderRadius:14, padding:'14px 16px', marginBottom:10, cursor:'pointer',
+              display:'flex', alignItems:'center', gap:14,
+              boxShadow: planSel===p.id ? `0 4px 16px ${p.color}22` : 'none',
+              transition:'border-color .15s, box-shadow .15s' }}>
+            <div style={{ width:20, height:20, borderRadius:'50%',
+              border:`2px solid ${planSel===p.id ? p.color : '#d1d5db'}`,
+              background: planSel===p.id ? p.color : '#fff',
+              flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              {planSel===p.id && <div style={{ width:8, height:8, borderRadius:'50%', background:'#fff' }}/>}
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+                <span style={{ fontSize:15, fontWeight:800, color:p.color }}>{p.label}</span>
+                <span style={{ fontSize:15, fontWeight:800, color:'#111827' }}>{p.precio}<span style={{ fontSize:11, fontWeight:400, color:'#6b7280' }}>/mes</span></span>
+              </div>
+              <div style={{ fontSize:12, color:'#6b7280', marginTop:2 }}>
+                {p.alumnos} · {p.ia ? 'Co-Piloto IA incluido' : 'Sin IA'}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <div style={{ background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:10,
+          padding:'10px 14px', marginBottom:16, fontSize:12, color:'#1e40af', lineHeight:1.5 }}>
+          💳 El pago se procesa por <strong>Mercado Pago</strong>. Se renueva automáticamente cada mes. Podés cancelar en cualquier momento.
+        </div>
+
+        <button onClick={suscribirse} disabled={cargando}
+          style={{ width:'100%', padding:'15px 20px', borderRadius:14, border:'none',
+            background: cargando ? '#d1d5db' : `linear-gradient(135deg,${color},${color}cc)`,
+            color:'#fff', fontSize:15, fontWeight:800, cursor: cargando ? 'default' : 'pointer',
+            boxShadow: cargando ? 'none' : `0 4px 20px ${color}44`,
+            marginBottom:12 }}>
+          {cargando ? 'Redirigiendo a Mercado Pago...' : `Suscribirme al plan ${PLANES_DOCENTES.find(p=>p.id===planSel)?.label}`}
+        </button>
+
+        {error && (
+          <div style={{ fontSize:12, color:'#dc2626', background:'#fef2f2', border:'1px solid #fca5a5',
+            borderRadius:8, padding:'8px 12px', marginBottom:12, textAlign:'center' }}>
+            {error}
+          </div>
+        )}
+
+        <a href={`https://wa.me/${WA_SOPORTE}?text=${waMsg}`} target="_blank" rel="noreferrer"
+          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+            width:'100%', padding:'12px 20px', borderRadius:14, border:'1.5px solid #e2e8f0',
+            background:'#fff', color:'#374151', fontSize:13, fontWeight:600,
+            textDecoration:'none', marginBottom:16 }}>
+          💬 Contactar soporte por WhatsApp
+        </a>
       </div>
-      <a href={`https://wa.me/${WA_SOPORTE}?text=${waMsg}`} target="_blank" rel="noreferrer"
-        style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10,
-          width:'100%', maxWidth:300, padding:'14px 20px', borderRadius:14,
-          background:'#22C55E', color:'#fff', fontSize:15, fontWeight:700,
-          textDecoration:'none', marginBottom:16,
-          boxShadow:'0 4px 20px rgba(34,197,94,0.3)' }}>
-        💬 Activar mi cuenta
-      </a>
-      <button onClick={onVolver}
-        style={{ background:'none', border:'none', color:GL, fontSize:12, cursor:'pointer', textDecoration:'underline' }}>
-        Volver ({email})
-      </button>
+
+      <div style={{ padding:'0 20px 24px', textAlign:'center' }}>
+        <button onClick={onVolver}
+          style={{ background:'none', border:'none', color:'#9ca3af', fontSize:12, cursor:'pointer', textDecoration:'underline' }}>
+          Volver ({email})
+        </button>
+      </div>
     </div>
   );
 }
 
-// ── Pantalla: Cuenta suspendida / impaga ───────────────────────
-function PantallaSuspendida({ email, estado, color, onVolver }) {
-  const waMsg = encodeURIComponent(
-    estado === 'impago'
-      ? `Hola! Quiero regularizar mi suscripción a la App Docente. Mi email: ${email}`
-      : `Hola! Mi acceso a la App Docente está suspendido. Mi email: ${email}`
-  );
+// ── Pantalla: Demo vencido ─────────────────────────────────────
+function PantallaDemoVencido({ email, orgId, color, onVolver }) {
   return (
-    <div style={{ maxWidth:420, margin:'0 auto', minHeight:'100vh', background:'#fff',
-      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-      fontFamily:"'Georgia',serif", padding:'40px 28px', textAlign:'center' }}>
-      <div style={{ fontSize:56, marginBottom:20 }}>🔒</div>
-      <div style={{ fontSize:22, fontWeight:800, color:TX, marginBottom:12 }}>
-        {estado === 'impago' ? 'Suscripción vencida' : 'Cuenta suspendida'}
-      </div>
-      <div style={{ fontSize:14, color:GR, maxWidth:280, lineHeight:1.6, marginBottom:32 }}>
-        {estado === 'impago'
-          ? 'Regularizá tu pago para reactivar el acceso a la App Docente.'
-          : 'Contactá al administrador para resolver el problema con tu cuenta.'}
-      </div>
-      <a href={`https://wa.me/${WA_SOPORTE}?text=${waMsg}`} target="_blank" rel="noreferrer"
-        style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10,
-          width:'100%', maxWidth:300, padding:'14px 20px', borderRadius:14,
-          background:'#22C55E', color:'#fff', fontSize:15, fontWeight:700,
-          textDecoration:'none', marginBottom:16,
-          boxShadow:'0 4px 20px rgba(34,197,94,0.3)' }}>
-        💬 Contactar soporte
-      </a>
-      <button onClick={onVolver}
-        style={{ background:'none', border:'none', color:GL, fontSize:12, cursor:'pointer', textDecoration:'underline' }}>
-        Volver ({email})
-      </button>
-    </div>
+    <SelectorPlanesMP
+      orgId={orgId}
+      email={email}
+      titulo="Tu prueba gratuita venció"
+      subtitulo="Activá un plan para seguir gestionando tus alumnos e informes."
+      emoji="⏳"
+      color={color}
+      onVolver={onVolver}
+    />
+  );
+}
+
+// ── Pantalla: Cuenta suspendida / impaga ───────────────────────
+function PantallaSuspendida({ email, orgId, estado, color, onVolver }) {
+  return (
+    <SelectorPlanesMP
+      orgId={orgId}
+      email={email}
+      titulo={estado === 'impago' ? 'Suscripción vencida' : 'Cuenta suspendida'}
+      subtitulo={estado === 'impago'
+        ? 'Regularizá tu suscripción para recuperar el acceso completo.'
+        : 'Reactivá tu cuenta suscribiéndote a un plan.'}
+      emoji={estado === 'impago' ? '💳' : '🔒'}
+      color={color}
+      onVolver={onVolver}
+    />
   );
 }

@@ -45,7 +45,7 @@ const CENTRAL_URL         = 'https://ngymvfvlknaltsvsrvjm.supabase.co';
 const CENTRAL_KEY         = process.env.CENTRAL_SUPABASE_KEY;
 const CENTRAL_SERVICE_KEY = process.env.CENTRAL_SUPABASE_SERVICE_KEY || process.env.CENTRAL_SERVICE_KEY || '';
 if (!CENTRAL_KEY) throw new Error('CENTRAL_SUPABASE_KEY env var es requerida');
-const DEMO_DIAS           = 28;
+const DEMO_DIAS           = parseInt(process.env.DEMO_DIAS || '28', 10);
 const APP_ID_DOCENTE      = 'docentes';
 const OWNER_ID            = 'd8eef2e2-7e07-4ec9-9c6e-766addf89cc5';
 
@@ -518,10 +518,10 @@ app.post('/api/verify-token', async (req, res) => {
       if (!acceso || !acceso.tiene_acceso) {
         // Demo vencido: tiene suscripción pero expiró
         if (acceso && acceso.estado === 'demo' && (acceso.dias_restantes ?? 0) <= 0) {
-          return res.status(403).json({ code: 'demo_vencido', error: 'Tu período de prueba venció.', email, nombre: payload.name });
+          return res.status(403).json({ code: 'demo_vencido', error: 'Tu período de prueba venció.', email, nombre: payload.name, orgId: acceso.ret_org_id || acceso.org_id || null });
         }
         if (acceso && acceso.estado === 'impago') {
-          return res.status(403).json({ code: 'impago', error: 'Tu suscripción está vencida.', email, nombre: payload.name });
+          return res.status(403).json({ code: 'impago', error: 'Tu suscripción está vencida.', email, nombre: payload.name, orgId: acceso.ret_org_id || acceso.org_id || null });
         }
         // Sin cuenta — verificar si está suspendido (el RPC filtra suspendidos)
         const central = centralAdmin();
@@ -599,9 +599,11 @@ app.post('/api/verify-token', async (req, res) => {
       orgId,
       plan,
       esAdmin,
-      acceso: esAdmin ? { estado: 'activo', diasRestantes: null } : {
+      acceso: esAdmin ? { estado: 'activo', diasRestantes: null, fechaFin: null, mpPreapprovalId: null } : {
         estado: acceso.estado,
         diasRestantes: acceso.dias_restantes ?? null,
+        fechaFin: acceso.fecha_fin ?? null,
+        mpPreapprovalId: acceso.mp_preapproval_id ?? null,
       },
     });
   } catch (e) {
@@ -984,6 +986,85 @@ app.get('/api/presencia', requireAuth, async (req, res) => {
 app.get('/api/health', requireAuth, async (req, res) => {
   const { error } = await supabase.from('escuelas').select('count').limit(1);
   res.json({ status: 'ok', supabase: error ? 'error' : 'conectado', timestamp: new Date().toISOString() });
+});
+
+// ══════════════════════════════════════════════════════════════
+// Mercado Pago — proxy seguro (orgId viene del token, no del cliente)
+// ══════════════════════════════════════════════════════════════
+async function _proxyMpCrear(orgId, plan, res) {
+  const saasUrl = process.env.SAAS_ADMIN_URL || 'https://saas-admin-panel.vercel.app';
+  try {
+    const r = await fetch(`${saasUrl}/api/mp-crear-suscripcion`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ org_id: orgId, app_id: APP_ID_DOCENTE, plan }),
+    });
+    const data = await r.json();
+    return res.status(r.status).json(data);
+  } catch (e) {
+    console.error('[mp-crear-suscripcion]', e.message);
+    return res.status(500).json({ error: 'Error al conectar con el servicio de pagos.' });
+  }
+}
+
+// Endpoint autenticado — usado desde dentro de la app (MiPlan)
+app.post('/api/mp-crear-suscripcion', requireAuth, async (req, res) => {
+  const { plan } = req.body || {};
+  if (!plan) return res.status(400).json({ error: 'plan requerido' });
+  const orgId = req.orgId;
+  if (!orgId) return res.status(403).json({ error: 'sin_org' });
+  return _proxyMpCrear(orgId, plan, res);
+});
+
+// Endpoint público — usado desde la pantalla de login (demo vencido / suspendido)
+// El org_id viene del servidor en la respuesta 403, no puede ser adivinado (UUID)
+app.post('/api/mp-pago-publico', async (req, res) => {
+  const { org_id, plan } = req.body || {};
+  if (!org_id || !plan) return res.status(400).json({ error: 'org_id y plan requeridos' });
+  return _proxyMpCrear(org_id, plan, res);
+});
+
+app.post('/api/mp-cancelar-suscripcion', requireAuth, async (req, res) => {
+  const orgId = req.orgId;
+  if (!orgId) return res.status(403).json({ error: 'sin_org' });
+
+  const central = centralAdmin();
+  if (!central) return res.status(500).json({ error: 'sin_central' });
+
+  const { data: sub } = await central
+    .from('suscripciones_apps')
+    .select('mp_preapproval_id')
+    .eq('org_id', orgId)
+    .eq('app_id', APP_ID_DOCENTE)
+    .maybeSingle();
+
+  if (!sub?.mp_preapproval_id) {
+    return res.status(404).json({ error: 'No hay suscripción activa con débito automático.' });
+  }
+
+  const mpToken = process.env.MP_ACCESS_TOKEN;
+  try {
+    const r = await fetch(`https://api.mercadopago.com/preapproval/${sub.mp_preapproval_id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mpToken}` },
+      body: JSON.stringify({ status: 'cancelled' }),
+    });
+    if (!r.ok) {
+      const err = await r.json();
+      console.error('[mp-cancelar]', err);
+      return res.status(500).json({ error: 'Error al cancelar en Mercado Pago.' });
+    }
+    // El webhook mp-webhook.js recibirá preapproval.cancelled y actualizará el estado en DB.
+    // También lo actualizamos aquí para respuesta inmediata.
+    await central.from('suscripciones_apps')
+      .update({ estado: 'cancelado', mp_preapproval_id: null })
+      .eq('org_id', orgId)
+      .eq('app_id', APP_ID_DOCENTE);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[mp-cancelar-suscripcion]', e.message);
+    return res.status(500).json({ error: 'Error al cancelar la suscripción.' });
+  }
 });
 
 // ══════════════════════════════════════════════════════════════
