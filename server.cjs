@@ -976,22 +976,27 @@ app.get('/api/presencia', requireAuth, async (req, res) => {
       // Verificar estado actual antes de actualizar presencia
       const { data: sub } = await central
         .from('suscripciones_apps')
-        .select('estado')
+        .select('estado, fecha_vencimiento, fecha_inicio_demo, limite_demo_dias')
         .eq('app_id', APP_ID_DOCENTE)
         .eq('org_id', orgId)
         .maybeSingle();
 
-      // Si está suspendido, impago o cancelado → forzar logout
-      const ESTADOS_BLOQUEADOS = ['suspendido', 'cancelado'];
-      if (sub && ESTADOS_BLOQUEADOS.includes(sub.estado)) {
+      // Si está suspendido o cancelado → forzar logout
+      if (sub && ['suspendido', 'cancelado'].includes(sub.estado)) {
         return res.status(403).json({ code: sub.estado, error: 'Acceso suspendido' });
       }
 
-      // Demo vencido — verificar via RPC para obtener dias_restantes
+      // Demo vencido — calcular por fecha_vencimiento o fecha_inicio_demo + limite_demo_dias
       if (sub?.estado === 'demo') {
-        const resultado = await verificarAccesoCentral(req.session.email, APP_ID_DOCENTE);
-        const acceso = Array.isArray(resultado) ? (resultado[0] || null) : resultado;
-        if (acceso && !acceso.tiene_acceso) {
+        let vencido = false;
+        if (sub.fecha_vencimiento) {
+          vencido = new Date(sub.fecha_vencimiento) < new Date();
+        } else if (sub.fecha_inicio_demo && sub.limite_demo_dias) {
+          const fin = new Date(sub.fecha_inicio_demo);
+          fin.setDate(fin.getDate() + sub.limite_demo_dias);
+          vencido = fin < new Date();
+        }
+        if (vencido) {
           return res.status(403).json({ code: 'demo_vencido', error: 'Demo vencido' });
         }
       }
