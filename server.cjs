@@ -973,6 +973,29 @@ app.get('/api/presencia', requireAuth, async (req, res) => {
   if (orgId) {
     const central = centralAdmin();
     if (central) {
+      // Verificar estado actual antes de actualizar presencia
+      const { data: sub } = await central
+        .from('suscripciones_apps')
+        .select('estado')
+        .eq('app_id', APP_ID_DOCENTE)
+        .eq('org_id', orgId)
+        .maybeSingle();
+
+      // Si está suspendido, impago o cancelado → forzar logout
+      const ESTADOS_BLOQUEADOS = ['suspendido', 'cancelado'];
+      if (sub && ESTADOS_BLOQUEADOS.includes(sub.estado)) {
+        return res.status(403).json({ code: sub.estado, error: 'Acceso suspendido' });
+      }
+
+      // Demo vencido — verificar via RPC para obtener dias_restantes
+      if (sub?.estado === 'demo') {
+        const resultado = await verificarAccesoCentral(req.session.email, APP_ID_DOCENTE);
+        const acceso = Array.isArray(resultado) ? (resultado[0] || null) : resultado;
+        if (acceso && !acceso.tiene_acceso) {
+          return res.status(403).json({ code: 'demo_vencido', error: 'Demo vencido' });
+        }
+      }
+
       central.from('suscripciones_apps')
         .update({ ultimo_acceso: new Date().toISOString() })
         .eq('app_id', APP_ID_DOCENTE)

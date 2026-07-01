@@ -94,10 +94,13 @@ export default function App() {
   // Ping de presencia cada 5 minutos para mantener ultimo_acceso actualizado en el SaaS
   useEffect(() => {
     if (!usuario) return;
-    const ping = () => {
+    const ping = async () => {
       const token = getSessionToken();
       if (!token) return;
-      fetch('/api/presencia', { headers: { 'x-session-token': token } }).catch(() => {});
+      try {
+        const res = await fetch('/api/presencia', { headers: { 'x-session-token': token } });
+        if (res.status === 403) logout();
+      } catch {}
     };
     const t = setInterval(ping, 5 * 60 * 1000);
     return () => clearInterval(t);
