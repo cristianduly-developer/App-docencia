@@ -102,6 +102,7 @@ export default function App() {
         if (res.status === 403) logout();
       } catch {}
     };
+    ping(); // verificar estado al cargar la app
     const t = setInterval(ping, 5 * 60 * 1000);
     return () => clearInterval(t);
   }, [usuario]);
