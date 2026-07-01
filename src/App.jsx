@@ -11,7 +11,7 @@ import Bienvenida from './components/auth/Bienvenida';
 import { useAppUpdate } from './hooks/useAppUpdate';
 
 // Críticos — carga inmediata
-import PantallaLogin   from './components/auth/PantallaLogin';
+import PantallaLogin, { SelectorPlanesMP } from './components/auth/PantallaLogin';
 import MapaDia         from './components/mapa/MapaDia';
 import MapaFinde       from './components/mapa/MapaFinde';
 import ResumenNocturno from './components/mapa/ResumenNocturno';
@@ -58,6 +58,9 @@ export default function App() {
     };
   }, []);
 
+  // ── Bloqueo por suscripción vencida ───────────────────────
+  const [bloqueado, setBloqueado] = useState(null); // { code, orgId, email, color }
+
   // ── Autenticación ──────────────────────────────────────────
   const [usuario, setUsuario] = useState(() => {
     const u = leer("aye_sesion", null);
@@ -99,7 +102,14 @@ export default function App() {
       if (!token) return;
       try {
         const res = await fetch('/api/presencia', { headers: { 'x-session-token': token } });
-        if (res.status === 403) logout();
+        if (res.status === 403) {
+          const data = await res.json().catch(() => ({}));
+          // Limpiar sesión pero mostrar pantalla de planes directamente
+          setSessionToken(null);
+          localStorage.removeItem('aye_sesion');
+          setBloqueado({ code: data.code, orgId: usuario?.orgId, email: usuario?.email });
+          setUsuario(null);
+        }
       } catch {}
     };
     ping(); // verificar estado al cargar la app
@@ -188,7 +198,21 @@ export default function App() {
     saveAlu(aComp);
   };
 
-  if (!usuario) return <PantallaLogin onLogin={login} />;
+  if (!usuario) {
+    if (bloqueado) {
+      const colorActivo = localStorage.getItem('aye_color_tema') || '#2D6A4F';
+      return <SelectorPlanesMP
+        orgId={bloqueado.orgId}
+        email={bloqueado.email}
+        titulo={bloqueado.code === 'demo_vencido' ? 'Tu prueba gratuita venció' : bloqueado.code === 'cancelado' ? 'Suscripción cancelada' : 'Suscripción vencida'}
+        subtitulo="Elegí un plan para seguir usando la app."
+        emoji={bloqueado.code === 'demo_vencido' ? '⏳' : '🔒'}
+        color={colorActivo}
+        onVolver={() => setBloqueado(null)}
+      />;
+    }
+    return <PantallaLogin onLogin={login} />;
+  }
 
   const onboardingDone = !!localStorage.getItem("aye_onboarding_done") || !!usuario?.nombre;
   if (!onboardingDone) return (

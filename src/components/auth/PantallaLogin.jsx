@@ -338,7 +338,7 @@ function formatPrecio(n) {
   return '$' + Number(n).toLocaleString('es-AR');
 }
 
-function SelectorPlanesMP({ orgId, email, titulo, subtitulo, emoji, color, onVolver }) {
+export function SelectorPlanesMP({ orgId, email, titulo, subtitulo, emoji, color, onVolver }) {
   const [planSel,   setPlanSel]   = useState('profesional');
   const [cargando,  setCargando]  = useState(false);
   const [error,     setError]     = useState('');
