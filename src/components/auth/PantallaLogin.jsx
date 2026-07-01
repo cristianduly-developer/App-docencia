@@ -328,17 +328,41 @@ function PantallaRegistro({ email, nombre, credential, color, onRegistrado, onVo
 }
 
 // ── Selector de plan + pago MP ─────────────────────────────────
-const PLANES_DOCENTES = [
-  { id:'basico',      label:'Básico',      precio:'$25.000', alumnos:'15 alumnos',   ia:false,  color:'#6b7280' },
-  { id:'profesional', label:'Profesional', precio:'$35.000', alumnos:'25 alumnos',   ia:true,   color:'#4f46e5' },
-  { id:'premium',     label:'Premium',     precio:'$50.000', alumnos:'Ilimitados',   ia:true,   color:'#d97706' },
-];
+const PLANES_META = {
+  basico:      { label:'Básico',      alumnos:'15 alumnos',  ia:false, color:'#6b7280' },
+  profesional: { label:'Profesional', alumnos:'25 alumnos',  ia:true,  color:'#4f46e5' },
+  premium:     { label:'Premium',     alumnos:'Ilimitados',  ia:true,  color:'#d97706' },
+};
+
+function formatPrecio(n) {
+  return '$' + Number(n).toLocaleString('es-AR');
+}
 
 function SelectorPlanesMP({ orgId, email, titulo, subtitulo, emoji, color, onVolver }) {
   const [planSel,   setPlanSel]   = useState('profesional');
   const [cargando,  setCargando]  = useState(false);
   const [error,     setError]     = useState('');
+  const [planes,    setPlanes]    = useState([]);
   const waMsg = encodeURIComponent(`Hola! Necesito ayuda con mi suscripción a la App Docente. Mi email: ${email}`);
+
+  useEffect(() => {
+    fetch('/api/planes-precios')
+      .then(r => r.json())
+      .then(data => {
+        if (data.planes?.length) {
+          const ordenados = ['basico', 'profesional', 'premium']
+            .map(id => {
+              const row = data.planes.find(p => p.plan === id);
+              if (!row) return null;
+              const meta = PLANES_META[id] || { label: id, alumnos: '', ia: false, color: '#6b7280' };
+              return { id, ...meta, precio: formatPrecio(row.precio_mensual) };
+            })
+            .filter(Boolean);
+          setPlanes(ordenados);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function suscribirse() {
     if (!orgId) {
@@ -380,7 +404,10 @@ function SelectorPlanesMP({ orgId, email, titulo, subtitulo, emoji, color, onVol
           Elegí tu plan
         </div>
 
-        {PLANES_DOCENTES.map(p => (
+        {planes.length === 0 && (
+          <div style={{ textAlign:'center', padding:'20px 0', color:'#9ca3af', fontSize:13 }}>Cargando planes...</div>
+        )}
+        {planes.map(p => (
           <div key={p.id} onClick={() => setPlanSel(p.id)}
             style={{ background:'#fff', border:`2px solid ${planSel===p.id ? p.color : '#e2e8f0'}`,
               borderRadius:14, padding:'14px 16px', marginBottom:10, cursor:'pointer',
@@ -416,7 +443,7 @@ function SelectorPlanesMP({ orgId, email, titulo, subtitulo, emoji, color, onVol
             color:'#fff', fontSize:15, fontWeight:800, cursor: cargando ? 'default' : 'pointer',
             boxShadow: cargando ? 'none' : `0 4px 20px ${color}44`,
             marginBottom:12 }}>
-          {cargando ? 'Redirigiendo a Mercado Pago...' : `Suscribirme al plan ${PLANES_DOCENTES.find(p=>p.id===planSel)?.label}`}
+          {cargando ? 'Redirigiendo a Mercado Pago...' : `Suscribirme al plan ${planes.find(p=>p.id===planSel)?.label || planSel}`}
         </button>
 
         {error && (

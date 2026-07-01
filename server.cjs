@@ -1016,6 +1016,18 @@ app.post('/api/mp-crear-suscripcion', requireAuth, async (req, res) => {
   return _proxyMpCrear(orgId, plan, res);
 });
 
+// Precios de planes — público, sin auth
+app.get('/api/planes-precios', async (req, res) => {
+  const central = centralAdmin()
+  if (!central) return res.status(500).json({ error: 'sin_central' })
+  const { data, error } = await central
+    .from('planes_precios')
+    .select('plan, precio_mensual, beneficios')
+    .eq('app_id', APP_ID_DOCENTE)
+  if (error) return res.status(500).json({ error: error.message })
+  return res.json({ ok: true, planes: data || [] })
+})
+
 // Endpoint público — usado desde la pantalla de login (demo vencido / suspendido)
 // El org_id viene del servidor en la respuesta 403, no puede ser adivinado (UUID)
 app.post('/api/mp-pago-publico', async (req, res) => {

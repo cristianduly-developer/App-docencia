@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { LIMITE_ALUMNOS } from '../../constants';
 
-const PLANES_DOCENTES = [
-  { id:'basico',      label:'Básico',      precio:'$25.000', alumnos:'15 alumnos',  ia:false,  color:'#6b7280' },
-  { id:'profesional', label:'Profesional', precio:'$35.000', alumnos:'25 alumnos',  ia:true,   color:'#4f46e5' },
-  { id:'premium',     label:'Premium',     precio:'$50.000', alumnos:'Ilimitados',  ia:true,   color:'#d97706' },
-];
+const PLANES_META = {
+  basico:      { label:'Básico',      alumnos:'15 alumnos',  ia:false, color:'#6b7280' },
+  profesional: { label:'Profesional', alumnos:'25 alumnos',  ia:true,  color:'#4f46e5' },
+  premium:     { label:'Premium',     alumnos:'Ilimitados',  ia:true,  color:'#d97706' },
+};
+function formatPrecio(n) { return '$' + Number(n).toLocaleString('es-AR'); }
 
 const PLAN_META = {
   basico:      { label:'Básico',      color:'#6b7280', bg:'#f8fafc' },
@@ -26,12 +27,32 @@ export default function MiPlan({ alumnos, usuario, onActualizarUsuario }) {
   const fechaFin = acceso.fechaFin ? new Date(acceso.fechaFin) : null;
   const tieneMP  = !!acceso.mpPreapprovalId;
 
+  const [planesDB,        setPlanesDB]        = useState([]);
   const [vistaUpgrade,    setVistaUpgrade]    = useState(false);
   const [planUpgradeSel,  setPlanUpgradeSel]  = useState('premium');
   const [cargandoUpgrade, setCargandoUpgrade] = useState(false);
   const [cargandoCancel,  setCargandoCancel]  = useState(false);
   const [errorMsg,        setErrorMsg]        = useState('');
   const [confirmarCancel, setConfirmarCancel] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/planes-precios')
+      .then(r => r.json())
+      .then(data => {
+        if (data.planes?.length) {
+          const ordenados = ['basico', 'profesional', 'premium']
+            .map(id => {
+              const row = data.planes.find(p => p.plan === id);
+              if (!row) return null;
+              const meta = PLANES_META[id] || { label: id, alumnos: '', ia: false, color: '#6b7280' };
+              return { id, ...meta, precio: formatPrecio(row.precio_mensual) };
+            })
+            .filter(Boolean);
+          setPlanesDB(ordenados);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function iniciarUpgrade() {
     setCargandoUpgrade(true);
@@ -81,7 +102,7 @@ export default function MiPlan({ alumnos, usuario, onActualizarUsuario }) {
     setCargandoCancel(false);
   }
 
-  const planesUpgrade = PLANES_DOCENTES.filter(p => p.id !== plan);
+  const planesUpgrade = planesDB.filter(p => p.id !== plan);
 
   // ── Vista upgrade ──────────────────────────────────────────
   if (vistaUpgrade) {
@@ -134,7 +155,7 @@ export default function MiPlan({ alumnos, usuario, onActualizarUsuario }) {
             background: cargandoUpgrade ? '#d1d5db' : '#4f46e5',
             color:'#fff', fontSize:14, fontWeight:800, cursor: cargandoUpgrade ? 'default' : 'pointer',
             boxShadow: cargandoUpgrade ? 'none' : '0 4px 20px #4f46e544' }}>
-          {cargandoUpgrade ? 'Redirigiendo a Mercado Pago...' : `Suscribirme al plan ${PLANES_DOCENTES.find(p=>p.id===planUpgradeSel)?.label}`}
+          {cargandoUpgrade ? 'Redirigiendo a Mercado Pago...' : `Suscribirme al plan ${planesDB.find(p=>p.id===planUpgradeSel)?.label || planUpgradeSel}`}
         </button>
       </div>
     );
