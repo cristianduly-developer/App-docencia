@@ -602,7 +602,7 @@ app.post('/api/verify-token', async (req, res) => {
       acceso: esAdmin ? { estado: 'activo', diasRestantes: null, fechaFin: null, mpPreapprovalId: null } : {
         estado: acceso.estado,
         diasRestantes: acceso.dias_restantes ?? null,
-        fechaFin: acceso.fecha_fin ?? null,
+        fechaFin: acceso.fecha_vencimiento ?? null,
         mpPreapprovalId: acceso.mp_preapproval_id ?? null,
       },
     });
