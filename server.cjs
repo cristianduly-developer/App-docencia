@@ -1108,6 +1108,50 @@ app.post('/api/mp-cancelar-suscripcion', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
+// Eliminar organización (llamado desde SaaS admin)
+// ══════════════════════════════════════════════════════════════
+app.post('/api/eliminar-org', async (req, res) => {
+  const appKey = req.headers['x-app-key'];
+  if (!process.env.ERROR_REPORT_KEY || appKey !== process.env.ERROR_REPORT_KEY) {
+    return res.status(401).json({ ok: false, error: 'no_auth' });
+  }
+
+  const { org_id } = req.body || {};
+  if (!org_id) return res.status(400).json({ ok: false, error: 'org_id requerido' });
+
+  try {
+    const { data: org } = await supabase
+      .from('organizaciones')
+      .select('email_contacto')
+      .eq('id', org_id)
+      .single();
+    if (!org) return res.status(404).json({ ok: false, error: 'org no encontrada' });
+
+    const SUPA_URL  = process.env.VITE_SUPABASE_URL  || process.env.SUPABASE_URL;
+    const SUPA_SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!SUPA_URL || !SUPA_SKEY) {
+      return res.status(500).json({ ok: false, error: 'config_incompleta' });
+    }
+
+    const supaLocal = createClient(SUPA_URL, SUPA_SKEY);
+    const { data: { users } } = await supaLocal.auth.admin.listUsers();
+    const user = users?.find(u => u.email?.toLowerCase() === org.email_contacto?.toLowerCase());
+    if (!user) return res.status(200).json({ ok: true, msg: 'usuario no encontrado en satellite' });
+
+    const uid = user.id;
+    await supaLocal.from('registros').delete().eq('user_id', uid);
+    await supaLocal.from('escuelas').delete().eq('user_id', uid);
+    await supaLocal.from('empleados_organizacion').delete().eq('user_id', uid);
+
+    await supaLocal.auth.admin.deleteUser(uid);
+    return res.status(200).json({ ok: true });
+  } catch (e) {
+    console.error('[eliminar-org]', e.message);
+    return res.status(500).json({ ok: false, error: 'internal' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
 // Páginas
 // ══════════════════════════════════════════════════════════════
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist', 'index.html')));
