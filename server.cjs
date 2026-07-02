@@ -1120,14 +1120,18 @@ app.post('/api/eliminar-org', async (req, res) => {
   if (!org_id) return res.status(400).json({ ok: false, error: 'org_id requerido' });
 
   try {
-    const { data: org } = await supabase
+    // Buscar email en central
+    const central = centralAdmin();
+    if (!central) return res.status(500).json({ ok: false, error: 'central no configurada' });
+    const { data: org } = await central
       .from('organizaciones')
       .select('email_contacto')
       .eq('id', org_id)
       .single();
     if (!org) return res.status(404).json({ ok: false, error: 'org no encontrada' });
 
-    const SUPA_URL  = process.env.VITE_SUPABASE_URL  || process.env.SUPABASE_URL;
+    // Cliente admin del satellite (docentes)
+    const SUPA_URL  = process.env.SUPABASE_URL;
     const SUPA_SKEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!SUPA_URL || !SUPA_SKEY) {
       return res.status(500).json({ ok: false, error: 'config_incompleta' });
