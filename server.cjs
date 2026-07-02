@@ -661,6 +661,14 @@ app.post('/api/registrar-demo', async (req, res) => {
         org_id: orgId,
         app_id: APP_ID_DOCENTE,
       }).then(() => {});
+
+      central2.from('eventos_suscripcion').insert({
+        org_id: orgId,
+        app_id: APP_ID_DOCENTE,
+        tipo: 'nueva_suscripcion',
+        descripcion: `Nueva demo — ${nombre} (${email})`,
+        plan: 'profesional',
+      }).then(() => {});
     }
 
     try {
@@ -1144,8 +1152,14 @@ app.post('/api/eliminar-org', async (req, res) => {
 
     const uid = user.id;
     await supaLocal.from('registros').delete().eq('user_id', uid);
+    await supaLocal.from('documentos').delete().eq('user_id', uid);
+    await supaLocal.from('avisos').delete().eq('user_id', uid);
+    await supaLocal.from('alumnos').delete().eq('user_id', uid);
+    await supaLocal.from('profesionales').delete().eq('user_id', uid);
+    await supaLocal.from('docentes').delete().eq('user_id', uid);
     await supaLocal.from('escuelas').delete().eq('user_id', uid);
-    await supaLocal.from('empleados_organizacion').delete().eq('user_id', uid);
+    await supaLocal.from('usuarios').delete().eq('user_id', uid);
+    await supaLocal.from('perfiles').delete().eq('user_id', uid);
 
     await supaLocal.auth.admin.deleteUser(uid);
     return res.status(200).json({ ok: true });
