@@ -18,7 +18,7 @@ export const TX  = "#1a202c";
 export const FO  = "#f1f5f9";
 
 // ─── Plan limits ──────────────────────────────────────────────
-export const LIMITE_ALUMNOS = { basico: 15, profesional: 25, premium: Infinity };
+export const LIMITE_ALUMNOS = { basico: 15, profesional: 25, premium: Infinity, sincargo: Infinity, demo: Infinity };
 
 // ─── Días de la semana ────────────────────────────────────────
 export const DIAS   = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
