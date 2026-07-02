@@ -50,7 +50,7 @@ export default function PantallaLogin({ onLogin }) {
               setCargando(false);
               return;
             }
-            if (data.code === 'impago' || data.code === 'suspendido') {
+            if (data.code === 'impago' || data.code === 'suspendido' || data.code === 'cancelado') {
               setDatosSin({ email: data.email, nombre: data.nombre, estado: data.code, orgId: data.orgId });
               setPantalla('suspendido');
               setCargando(false);

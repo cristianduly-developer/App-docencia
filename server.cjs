@@ -537,11 +537,11 @@ app.post('/api/verify-token', async (req, res) => {
               .select('estado')
               .eq('org_id', empData[0].org_id)
               .eq('app_id', APP_ID_DOCENTE)
-              .in('estado', ['suspendido', 'impago'])
+              .in('estado', ['suspendido', 'impago', 'cancelado'])
               .limit(1)
               .maybeSingle();
             if (subData?.estado) {
-              return res.status(403).json({ code: subData.estado, error: 'Tu acceso está suspendido. Contactá al administrador.', email, nombre: payload.name });
+              return res.status(403).json({ code: subData.estado, error: 'Tu acceso está suspendido. Contactá al administrador.', email, nombre: payload.name, orgId: empData[0].org_id });
             }
           }
         }
