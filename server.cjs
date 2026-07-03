@@ -53,6 +53,19 @@ const centralAdmin = () => CENTRAL_SERVICE_KEY
   ? createClient(CENTRAL_URL, CENTRAL_SERVICE_KEY)
   : null;
 
+async function findUserByEmail(supa, email) {
+  const target = email && email.toLowerCase();
+  if (!target) return null;
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await supa.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) return null;
+    const found = data.users.find(u => u.email && u.email.toLowerCase() === target);
+    if (found) return found;
+    if (data.users.length < 1000) break;
+  }
+  return null;
+}
+
 async function verificarAccesoCentral(email, appId) {
   const key = CENTRAL_SERVICE_KEY || CENTRAL_KEY;
   const res = await fetch(`${CENTRAL_URL}/rest/v1/rpc/verificar_acceso_email`, {
@@ -1032,7 +1045,7 @@ async function _proxyMpCrear(orgId, plan, res) {
   try {
     const r = await fetch(`${saasUrl}/api/mp-crear-suscripcion`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-internal-key': process.env.ERROR_REPORT_KEY || '' },
       body: JSON.stringify({ org_id: orgId, app_id: APP_ID_DOCENTE, plan }),
     });
     const data = await r.json();
@@ -1146,8 +1159,7 @@ app.post('/api/eliminar-org', async (req, res) => {
     }
 
     const supaLocal = createClient(SUPA_URL, SUPA_SKEY);
-    const { data: { users } } = await supaLocal.auth.admin.listUsers();
-    const user = users?.find(u => u.email?.toLowerCase() === org.email_contacto?.toLowerCase());
+    const user = await findUserByEmail(supaLocal, org.email_contacto);
     if (!user) return res.status(200).json({ ok: true, msg: 'usuario no encontrado en satellite' });
 
     const uid = user.id;
