@@ -1045,7 +1045,7 @@ async function _proxyMpCrear(orgId, plan, res) {
   try {
     const r = await fetch(`${saasUrl}/api/mp-crear-suscripcion`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-internal-key': process.env.ERROR_REPORT_KEY || '' },
+      headers: { 'Content-Type': 'application/json', 'x-internal-key': process.env.INTERNAL_API_KEY || '' },
       body: JSON.stringify({ org_id: orgId, app_id: APP_ID_DOCENTE, plan }),
     });
     const data = await r.json();
