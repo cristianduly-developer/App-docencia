@@ -105,6 +105,38 @@ const supabase = createClient(
   process.env.SUPABASE_KEY || ''
 );
 
+// ── Paywall (item 8): espejo de acceso por tenant ──────────────
+// Docentes es un server, así que el bloqueo se hace acá (además de RLS).
+// FAIL-OPEN: si no hay fila espejo o falla la consulta, permite.
+const PAYWALL_GRACE_DAYS = 7;
+async function syncTenantAccess(orgId, plan, diasRestantes) {
+  if (!orgId) return;
+  try {
+    const dias = (diasRestantes ?? 3650) + PAYWALL_GRACE_DAYS;
+    const validUntil = new Date(Date.now() + dias * 86400000).toISOString();
+    await supabase.from('tenant_access').upsert(
+      { tenant_id: orgId, plan: plan || 'basico', valid_until: validUntil },
+      { onConflict: 'tenant_id' }
+    );
+  } catch (e) { console.error('[syncTenantAccess]', e.message); }
+}
+
+// Cache 60s para no pegarle al espejo en cada escritura.
+const _accesoCache = new Map();
+async function tieneAccesoOrg(orgId) {
+  if (!orgId) return true;
+  const hit = _accesoCache.get(orgId);
+  if (hit && Date.now() - hit.ts < 60_000) return hit.ok;
+  let ok = true; // fail-open
+  try {
+    const { data } = await supabase
+      .from('tenant_access').select('valid_until').eq('tenant_id', orgId).maybeSingle();
+    if (data) ok = new Date(data.valid_until).getTime() > Date.now();
+  } catch { ok = true; }
+  _accesoCache.set(orgId, { ok, ts: Date.now() });
+  return ok;
+}
+
 // ── RLS Fase 2: cliente por request con JWT que lleva org_id ──
 // Supabase verifica este JWT con SUPABASE_JWT_SECRET y aplica RLS por org
 function _firmarJWTOrg(orgId) {
@@ -602,6 +634,8 @@ app.post('/api/verify-token', async (req, res) => {
     const planRaw = esAdmin ? 'premium' : (acceso.plan || 'basico');
     // 'sincargo' = premium sin costo — mismos permisos que premium
     const plan = planRaw === 'sincargo' ? 'premium' : planRaw;
+    // Paywall: poblar/refrescar el espejo de acceso en cada login
+    await syncTenantAccess(orgId, plan, esAdmin ? 3650 : (acceso?.dias_restantes ?? null));
     const sessionToken = crearToken(email, nombreDocente, payload.picture, orgId, plan);
     res.json({
       ok: true,
@@ -622,6 +656,31 @@ app.post('/api/verify-token', async (req, res) => {
   } catch (e) {
     console.error('[verify-token]', e.message);
     res.status(401).json({ error: 'Token de Google inválido o expirado.' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// set-access — la central empuja el estado de acceso al espejo
+// (activar, cancelar, suspender, demo vencida). tenant_id = org_id.
+// ══════════════════════════════════════════════════════════════
+app.post('/api/set-access', async (req, res) => {
+  const appKey = req.headers['x-app-key'];
+  if (!process.env.ERROR_REPORT_KEY || appKey !== process.env.ERROR_REPORT_KEY) {
+    return res.status(401).json({ ok: false, error: 'no_auth' });
+  }
+  const { org_id, valid_until, plan } = req.body || {};
+  if (!org_id || !valid_until) {
+    return res.status(400).json({ ok: false, error: 'org_id y valid_until requeridos' });
+  }
+  try {
+    const row = { tenant_id: org_id, valid_until };
+    if (plan) row.plan = plan;
+    const { error } = await supabase.from('tenant_access').upsert(row, { onConflict: 'tenant_id' });
+    if (error) return res.status(500).json({ ok: false, error: error.message });
+    _accesoCache.delete(org_id); // invalidar cache para que el gate lo vea al instante
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message });
   }
 });
 
@@ -882,6 +941,10 @@ TABLAS.forEach(tabla => {
     const bodyStr = JSON.stringify(req.body);
     if (bodyStr.length > 64_000)
       return res.status(400).json({ error: 'Payload demasiado grande.' });
+    // Paywall: bloquear escritura si la suscripción venció (lectura sigue abierta)
+    if (req.orgId && !(await tieneAccesoOrg(req.orgId))) {
+      return res.status(403).json({ code: 'sin_acceso', error: '🔒 Tu suscripción venció o está suspendida. Renovala para seguir cargando datos. Tus datos siguen guardados y podés verlos.' });
+    }
     try {
       const m = MAPEO[tabla];
       let body = m ? m.paraDB(req.body) : req.body;
