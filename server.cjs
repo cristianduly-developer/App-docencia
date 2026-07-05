@@ -36,6 +36,23 @@ async function rateLimit(key, maxReqs, windowMs) {
   _rl.set(key, entry);
   return entry.count > maxReqs;
 }
+// Fire-and-forget al SaaS admin panel
+function reportarError(err, contexto = {}) {
+  try {
+    const msg = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : null;
+    fetch('https://saas.solucionesmdp.com.ar/api/reportar-error', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-app-id': 'docentes',
+        'x-app-key': process.env.ERROR_REPORT_KEY || '',
+      },
+      body: JSON.stringify({ mensaje: msg, stack, ...contexto }),
+    }).catch(() => {});
+  } catch {}
+}
+
 const GOOGLE_CLIENT_ID = "117583093488-94tk32l3502mj4c3vff7fci9oclcvvhn.apps.googleusercontent.com";
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
@@ -974,6 +991,7 @@ TABLAS.forEach(tabla => {
       throw new Error('Demasiados reintentos en ' + tabla);
     } catch(e) {
       console.error(`[POST] ${tabla}:`, e.message);
+      reportarError(e, { pantalla: `db/${tabla}`, accion: 'upsert', org_id: req.orgId });
       res.status(500).json({ error: e.message });
     }
   });
@@ -1004,6 +1022,7 @@ app.post('/api/db/registros/bulk', requireAuth, async (req, res) => {
     res.json({ ok: true, insertados: data.length });
   } catch(e) {
     console.error('[registros/bulk]', e.message);
+    reportarError(e, { pantalla: 'db/registros', accion: 'bulk_upsert', org_id: req.orgId });
     res.status(500).json({ error: e.message });
   }
 });
