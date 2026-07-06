@@ -1,9 +1,10 @@
 import React from 'react';
+import { reportarError } from '../../lib/reportarError';
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(e) { return { error: e }; }
-  componentDidCatch(e) { console.error('[ErrorBoundary]', e); }
+  componentDidCatch(e, info) { reportarError(e, { pantalla: window.location.pathname, accion: 'error_boundary', metadata: { componentStack: info?.componentStack } }); }
   render() {
     if (this.state.error) return (
       <div style={{ padding: 32, textAlign: "center", color: "#64748b" }}>
