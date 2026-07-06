@@ -20,6 +20,16 @@ export default function Bienvenida({ usuario, onComplete }) {
     };
     localStorage.setItem("aye_perfil",          JSON.stringify(perfil));
     localStorage.setItem("aye_onboarding_done", "1");
+
+    const emailUsuario = mail.trim() || usuario?.email
+    if (emailUsuario) {
+      fetch('https://saas.solucionesmdp.com.ar/api/prospecto-activado', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-app-id': 'docentes', 'x-app-key': import.meta.env.VITE_ERROR_KEY || '' },
+        body: JSON.stringify({ email: emailUsuario }),
+      }).catch(() => {})
+    }
+
     onComplete(perfil);
   };
 
