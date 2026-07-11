@@ -1185,24 +1185,18 @@ app.post('/api/mp-cancelar-suscripcion', requireAuth, async (req, res) => {
     return res.status(404).json({ error: 'No hay suscripción activa con débito automático.' });
   }
 
-  const mpToken = process.env.MP_ACCESS_TOKEN;
+  const saasUrl = process.env.SAAS_ADMIN_URL || 'https://saas-admin-panel.vercel.app';
   try {
-    const r = await fetch(`https://api.mercadopago.com/preapproval/${sub.mp_preapproval_id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${mpToken}` },
-      body: JSON.stringify({ status: 'cancelled' }),
+    const r = await fetch(`${saasUrl}/api/mp-crear-suscripcion?action=cancelar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-key': process.env.INTERNAL_API_KEY || '' },
+      body: JSON.stringify({ org_id: orgId, app_id: APP_ID_DOCENTE, mp_preapproval_id: sub.mp_preapproval_id }),
     });
+    const data = await r.json();
     if (!r.ok) {
-      const err = await r.json();
-      console.error('[mp-cancelar]', err);
+      console.error('[mp-cancelar]', data);
       return res.status(500).json({ error: 'Error al cancelar en Mercado Pago.' });
     }
-    // El webhook mp-webhook.js recibirá preapproval.cancelled y actualizará el estado en DB.
-    // También lo actualizamos aquí para respuesta inmediata.
-    await central.from('suscripciones_apps')
-      .update({ estado: 'cancelado', mp_preapproval_id: null })
-      .eq('org_id', orgId)
-      .eq('app_id', APP_ID_DOCENTE);
     return res.json({ ok: true });
   } catch (e) {
     console.error('[mp-cancelar-suscripcion]', e.message);
