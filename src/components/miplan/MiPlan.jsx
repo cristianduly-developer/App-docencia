@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAppContext } from '../../context/AppContext';
 import { LIMITE_ALUMNOS } from '../../constants';
 
 const PLANES_META = {
@@ -16,8 +15,7 @@ const PLAN_META = {
 };
 
 export default function MiPlan({ alumnos, usuario, onActualizarUsuario }) {
-  const { planDocente } = useAppContext();
-  const plan    = planDocente || 'basico';
+  const plan    = usuario?.plan || 'basico';
   const limite  = LIMITE_ALUMNOS[plan] ?? 15;
   const activos = alumnos.filter(a => !a.eliminado && a.activo !== false).length;
   const pct     = limite === Infinity ? 0 : Math.min(100, Math.round(activos / limite * 100));
