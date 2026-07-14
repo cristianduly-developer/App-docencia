@@ -3,7 +3,7 @@ import { G, GR, GL, TX, FO, TEMAS_COLOR } from '../../constants';
 import { setSessionToken } from '../../utils/session';
 import { GOOGLE_CLIENT_ID } from '../../constants';
 
-const WA_SOPORTE = '5492235767784';
+const WA_SOPORTE = '5492236965481';
 
 export default function PantallaLogin({ onLogin }) {
   const [cargando,    setCargando]    = useState(false);
